@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <title>Seuil</title>
-    <meta name="description" content="Private app for recording sessions, reading harm-reduction cards, checking risky combinations, and protecting your data.">
+    <meta name="description" content="Private harm-reduction PWA for encrypted session tracking, substance cards, combination checks, effect curves, inventory, statistics, and optional AI review.">
     <meta name="application-name" content="Seuil">
     <meta name="theme-color" content="#07080B">
     <meta name="color-scheme" content="dark">
@@ -15,16 +15,16 @@
     <meta name="google" content="notranslate">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'; upgrade-insecure-requests">
     <meta property="og:title" content="Seuil">
-    <meta property="og:description" content="Private educational app for recording sessions, reading harm-reduction cards, and better understanding risky combinations.">
+    <meta property="og:description" content="Private harm-reduction PWA for encrypted session tracking, substance cards, combination checks, effect curves, inventory, statistics, and optional AI review.">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="en_US">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Seuil">
-    <meta name="twitter:description" content="Private educational app for recording sessions, reading harm-reduction cards, and better understanding risky combinations.">
+    <meta name="twitter:description" content="Private harm-reduction PWA for encrypted session tracking, substance cards, combination checks, effect curves, inventory, statistics, and optional AI review.">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="apple-touch-icon" href="icon-180.png">
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="stylesheet" href="styles.css?v=29">
+    <link rel="stylesheet" href="styles.css?v=33">
 </head>
 <body class="auth-locked auth-booting">
     <div id="boot-screen" role="status" aria-live="polite">
@@ -37,7 +37,7 @@
             <p data-i18n="Chargement sécurisé...">Chargement sécurisé...</p>
         </div>
     </div>
-    <script src="i18n.js?v=49"></script>
+    <script src="i18n.js?v=52"></script>
     <!-- BOOT EARLY RECOVERY : tourne avant tout autre script (fichier externe - CSP script-src 'self'). -->
     <script src="boot.js?v=7"></script>
     <a class="skip-link" href="#contenu-principal">Aller au contenu principal</a>
@@ -300,43 +300,49 @@
                 <li class="nav-item active" data-tab="tab-journal">
                     <button>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                        Journal
+                        <span class="nav-label">Journal</span>
                     </button>
                 </li>
                 <li class="nav-item" data-tab="tab-stash">
                     <button>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                        Inventaire
+                        <span class="nav-label">Inventaire</span>
                     </button>
                 </li>
                 <li class="nav-item" data-tab="tab-guide">
                     <button>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
-                        Substances
+                        <span class="nav-label">Substances</span>
                     </button>
                 </li>
                 <li class="nav-item" data-tab="tab-stats">
                     <button>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                        Statistiques
+                        <span class="nav-label">Statistiques</span>
                     </button>
                 </li>
                 <li class="nav-item" data-tab="tab-publication">
                     <button>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-5"></path></svg>
-                        Infos
+                        <span class="nav-label">Infos</span>
+                    </button>
+                </li>
+                <li class="nav-item" data-tab="tab-donations">
+                    <button>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"></path></svg>
+                        <span class="nav-label">Donations</span>
                     </button>
                 </li>
                 <li class="nav-item" data-tab="tab-settings">
                     <button>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                        Paramètres
+                        <span class="nav-label">Paramètres</span>
                     </button>
                 </li>
                 <li class="nav-item admin-only" data-tab="tab-admin">
                     <button>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        Administration
+                        <span class="nav-label">Administration</span>
                     </button>
                 </li>
                 </ul>
@@ -465,6 +471,11 @@
                                     <label for="check-deduct-stash" style="font-size: 13px; color: var(--color-text-muted); cursor: pointer;">Déduire cette quantité de l'inventaire</label>
                                 </div>
 
+                                <div class="ai-context-actions ai-context-actions-form">
+                                    <button type="button" id="btn-ai-presession" class="btn btn-secondary btn-sm">Avant de démarrer</button>
+                                    <span class="microcopy">Relire les informations saisies avant d'ouvrir la session.</span>
+                                </div>
+
                                 <button type="submit" class="btn btn-primary btn-block" style="margin-top: 20px;">Démarrer le suivi</button>
                             </form>
                         </div>
@@ -477,6 +488,11 @@
                                     <h2 id="active-substance-title" style="margin: 0;"></h2>
                                 </div>
                                 <span class="indicator-dot"></span>
+                            </div>
+
+                            <div class="ai-context-actions">
+                                <button type="button" id="btn-ai-session" class="btn btn-secondary btn-sm">Analyser la session</button>
+                                <span class="microcopy">Lecture IA contextuelle, sans garantie médicale.</span>
                             </div>
 
                             <div class="form-row" style="margin-bottom: 10px;">
@@ -636,6 +652,7 @@
                     <div class="card-title">
                         <h2>Historique des sessions</h2>
                         <div style="display: flex; gap: 12px; align-items: center;">
+                            <button type="button" id="btn-ai-debrief" class="btn btn-secondary btn-sm">Débrief dernière session</button>
                             <input type="text" id="input-history-search" class="form-control form-control-sm" placeholder="Filtrer par substance…" style="max-width: 200px;">
                         </div>
                     </div>
@@ -740,6 +757,10 @@
                         <label for="compare-select" class="form-label">Ajouter une substance à comparer</label>
                         <select id="compare-select"><option value="">Sélectionnez…</option></select>
                     </div>
+                    <div class="ai-context-actions">
+                        <button type="button" id="btn-ai-comparison" class="btn btn-secondary btn-sm">Lire les courbes</button>
+                        <span class="microcopy">Synthèse prudente des courbes sélectionnées.</span>
+                    </div>
                     <div id="compare-empty" class="compare-empty">Aucune substance sélectionnée - ajoutez-en pour afficher les courbes.</div>
                     <div id="compare-chips" class="compare-chips"></div>
                     <div id="compare-chart" class="compare-chart" style="display:none;"></div>
@@ -788,6 +809,10 @@
                             <p id="inter-result-note" style="line-height: 1.5; font-size: 14px;">
                                 <!-- Dynamique -->
                             </p>
+                        </div>
+                        <div class="ai-context-actions">
+                            <button type="button" id="btn-ai-interaction" class="btn btn-secondary btn-sm">Lire le mélange</button>
+                            <span class="microcopy">Explication courte avec points d'attention.</span>
                         </div>
                     </div>
                 </div>
@@ -889,6 +914,9 @@
                 <header class="page-header">
                     <h1 class="page-title">Statistiques</h1>
                     <p class="page-subtitle">Tendances, espacements et signaux qui méritent une pause.</p>
+                    <div class="ai-context-actions ai-context-actions-header">
+                        <button type="button" id="btn-ai-trends" class="btn btn-secondary btn-sm">Lire les tendances</button>
+                    </div>
                 </header>
 
                 <!-- Cartes d'aperçu -->
@@ -1093,7 +1121,43 @@
                 </div>
             </section>
 
-            <!-- 6. ONGLET PARAMÈTRES -->
+            <!-- 6. ONGLET DONATIONS -->
+            <section id="tab-donations" class="tab-pane">
+                <header class="page-header">
+                    <h1 class="page-title">Soutenir Seuil</h1>
+                    <p class="page-subtitle">Un soutien volontaire aide à maintenir l’hébergement, les audits, les sources et les mises à jour éditoriales.</p>
+                </header>
+
+                <div class="grid grid-2">
+                    <div class="card quality-intro-card">
+                        <span class="section-kicker">Donations</span>
+                        <h2 class="card-title">PayPal Friends and Family</h2>
+                        <p class="prose">Si Seuil vous est utile, vous pouvez soutenir le projet par un don volontaire. Les dons servent à couvrir l’hébergement, les vérifications éditoriales, les améliorations de sécurité et la maintenance continue.</p>
+                        <div class="info-list compact">
+                            <div class="info-row"><span>Adresse PayPal</span><strong><a href="mailto:eusdeu21@gmail.com">eusdeu21@gmail.com</a></strong><small>envoyer via PayPal Friends and Family</small></div>
+                            <div class="paypal-name-box"><span>Nom affiché sur PayPal</span><strong>Elise Dune</strong></div>
+                            <div class="info-row"><span>Nature du soutien</span><strong>Don volontaire</strong><small>aucune contrepartie, aucun accès payant, aucune donnée de santé demandée</small></div>
+                            <div class="info-row"><span>Confidentialité</span><strong>Hors coffre Seuil</strong><small>Aucune donnée de santé, de session ou de compte n’est demandée pour donner.</small></div>
+                        </div>
+                        <div class="doc-links" aria-label="Donations">
+                            <a class="doc-link" href="mailto:eusdeu21@gmail.com">Ouvrir un email</a>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2 class="card-title">Pourquoi donner ?</h2>
+                        <div class="resource-list">
+                            <div class="resource-item"><strong>Hébergement :</strong> garder Seuil accessible, stable et rapide.</div>
+                            <div class="resource-item"><strong>Qualité :</strong> relire les fiches, corriger les données, maintenir les traductions françaises et anglaises.</div>
+                            <div class="resource-item"><strong>Sécurité :</strong> améliorer le coffre chiffré, tester les mises à jour et réduire les régressions.</div>
+                            <div class="resource-item"><strong>Indépendance :</strong> maintenir une base pédagogique sans publicité ni revente de données.</div>
+                        </div>
+                        <p class="fine-print">Un don ne remplace jamais les ressources d’urgence, l’accompagnement médical ou les structures de réduction des risques. Seuil reste un outil d’information et d’auto-suivi.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. ONGLET PARAMÈTRES -->
             <section id="tab-settings" class="tab-pane">
                 <header class="page-header">
                     <h1 class="page-title">Paramètres</h1>
@@ -1128,6 +1192,22 @@
                         </div>
                         <p id="dose-unit-settings-status" class="microcopy" aria-live="polite" style="margin-top:10px;"></p>
                     </form>
+                </div>
+
+                <div class="card ai-assistant-card" id="ai-assistant-card" style="margin-bottom:24px;">
+                    <h2 class="card-title">Assistant IA</h2>
+                    <p class="microcopy">Assistant discret orienté réduction des risques. Il peut se tromper et ne remplace jamais un avis médical ou une urgence.</p>
+                    <form id="ai-assistant-form" autocomplete="off">
+                        <div class="form-group">
+                            <label for="ai-assistant-input" class="form-label">Question</label>
+                            <textarea id="ai-assistant-input" class="form-control" rows="3" maxlength="3000" placeholder="Décrire une situation, un mélange ou un doute sans données directement identifiantes."></textarea>
+                        </div>
+                        <div class="ai-assistant-actions">
+                            <button id="ai-assistant-submit" type="submit" class="btn btn-secondary btn-sm">Demander à l’assistant</button>
+                            <span id="ai-assistant-status" class="microcopy" aria-live="polite"></span>
+                        </div>
+                    </form>
+                    <div id="ai-assistant-result" class="ai-assistant-result" hidden></div>
                 </div>
 
                 <!-- MON COMPTE -->
@@ -1399,6 +1479,18 @@
         </main>
     </div>
 
+    <aside id="ai-context-panel" class="ai-context-panel" role="region" aria-live="polite" aria-labelledby="ai-context-title" hidden>
+        <div class="ai-context-panel-head">
+            <div>
+                <span class="section-kicker">Assistant IA</span>
+                <h2 id="ai-context-title" class="card-title">Résultat IA</h2>
+            </div>
+            <button type="button" id="ai-context-close" class="btn btn-secondary btn-sm">Fermer</button>
+        </div>
+        <p id="ai-context-subtitle" class="microcopy">Analyse générée à partir des informations visibles dans votre coffre déverrouillé.</p>
+        <div id="ai-context-result" class="ai-assistant-result"></div>
+    </aside>
+
     <!-- MODALE CRÉATION DE COMPTE (admin) -->
     <div id="admin-create-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="admin-create-title">
         <div class="modal-content" style="max-width: 560px;">
@@ -1559,6 +1651,13 @@
                 </p>
             </div>
 
+            <div id="modal-sub-release-section" class="release-profile-section">
+                <h3 class="guide-section-title">Formes à libération différente</h3>
+                <div id="modal-sub-release-profiles" class="release-profile-list">
+                    <!-- Rempli en JS -->
+                </div>
+            </div>
+
             <div id="modal-sub-expanded-sections" class="substance-detail-sections">
                 <!-- Rempli en JS -->
             </div>
@@ -1573,13 +1672,14 @@
     </div>
 
     <!-- Chargement des Scripts -->
-    <script src="db.js?v=13"></script>
+    <script src="db.js?v=14"></script>
     <script src="substances-data.js?v=4"></script>
-    <script src="psychonaut-data.js?v=4"></script>
-    <script src="index-substances.js?v=8"></script>
+    <script src="psychonaut-data.js?v=5"></script>
+    <script src="index-substances.js?v=9"></script>
     <script src="route-model.js?v=15"></script>
     <script src="ui.js?v=3"></script>
     <script src="auth.js?v=19"></script>
-    <script src="app.js?v=99"></script>
+    <script src="app.js?v=104"></script>
+    <script src="ai.js?v=8"></script>
 </body>
 </html>

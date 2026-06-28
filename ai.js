@@ -1,316 +1,372 @@
-/* Seuil - ai.js : pont IA local (claude/codex) + repli copier-coller + prompts de réduction des risques. */
+/* Seuil - assistant IA sobre, via API serveur OpenRouter. */
 (function () {
-  "use strict";
-  const AI_MAINTENANCE = true;
-  const AI_MAINTENANCE_MESSAGE = "Assistant IA en maintenance temporaire.";
-  const AI = { bridge: false, clis: { claude: false, codex: false }, token: null, provider: null, ready: false };
+    "use strict";
 
-  async function detectBridge() {
-    if (AI_MAINTENANCE) {
-      AI.bridge = false;
-      AI.clis = { claude: false, codex: false };
-      AI.token = null;
-      AI.provider = null;
-      AI.ready = true;
-      return false;
+    const $ = (id) => document.getElementById(id);
+    const PROMPT_LIMIT = 2900;
+
+    function aiText(key, vars) {
+        if (typeof window.t === "function") return window.t(key, vars);
+        let text = String(key || "");
+        if (vars && typeof vars === "object") {
+            Object.keys(vars).forEach((name) => {
+                text = text.replace(new RegExp(`\\{${name}\\}`, "g"), String(vars[name]));
+            });
+        }
+        return text;
     }
-    try {
-      const res = await fetch("/api/ai/status", { headers: { "Accept": "application/json" } });
-      if (!res.ok) throw new Error();
-      const d = await res.json();
-      AI.bridge = !!d.bridge; AI.clis = d.clis || {}; AI.token = d.token || null;
-    } catch (_) { AI.bridge = false; }
-    const saved = (typeof appState !== "undefined" && appState.aiSettings && appState.aiSettings.provider) || null;
-    AI.provider = (saved && AI.clis[saved]) ? saved
-      : (AI.clis.claude ? "claude" : (AI.clis.codex ? "codex" : null));
-    AI.ready = true;
-    return AI.bridge;
-  }
 
-  async function callBridge(prompt) {
-    if (AI_MAINTENANCE) throw new Error(AI_MAINTENANCE_MESSAGE);
-    const res = await fetch("/api/ai/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-RDR-Bridge-Token": AI.token || "" },
-      body: JSON.stringify({ provider: AI.provider, prompt })
+    function escapeHtml(value) {
+        return String(value == null ? "" : value).replace(/[&<>"']/g, (char) => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[char]);
+    }
+
+    function clampText(text, max) {
+        const value = String(text || "");
+        return value.length > max ? `${value.slice(0, max - 40)}\n[contexte tronque]` : value;
+    }
+
+    function currentLanguageName() {
+        const lang = window.SeuilI18n && typeof SeuilI18n.getLanguage === "function" ? SeuilI18n.getLanguage() : "fr";
+        return lang === "en" ? "English" : "French";
+    }
+
+    function getSnapshot() {
+        if (typeof window.getSeuilAiSnapshot === "function") return window.getSeuilAiSnapshot();
+        return { activeSession: null, sessions: [], compareSelection: [], language: "fr" };
+    }
+
+    function getSubstanceSummary(key) {
+        if (typeof window.getSeuilSubstanceSummary === "function") return window.getSeuilSubstanceSummary(key);
+        return null;
+    }
+
+    function formatDose(session) {
+        if (!session) return "-";
+        const dose = session.cumulativeDose == null ? session.initialDose : session.cumulativeDose;
+        return `${dose == null ? "unknown" : dose} ${session.unit || ""}`.trim();
+    }
+
+    function formatDateTime(value) {
+        if (!value) return "-";
+        try { return new Date(value).toLocaleString(); } catch (_) { return "-"; }
+    }
+
+    function formatLogLines(session, maxLines) {
+        const logs = (session && session.logs) || [];
+        return logs.slice(-maxLines).map((log) => {
+            const dose = log.doseLabel || (log.inputAmount != null ? `${log.inputAmount} ${log.inputUnit || ""}` : "");
+            const note = log.note ? ` - ${log.note}` : "";
+            return `- ${formatDateTime(log.time)} | ${log.type || "log"} ${dose}${log.route ? ` | ${log.route}` : ""}${note}`;
+        }).join("\n") || "- none";
+    }
+
+    function promptHeader(title) {
+        return [
+            "You are Seuil's discreet harm-reduction assistant.",
+            `Answer in ${currentLanguageName()}.`,
+            "Be concise, practical, nonjudgmental, and clear about uncertainty.",
+            "Never present psychoactive use as safe. Do not optimize intoxication.",
+            "Do not give injection instructions, synthesis, sourcing, trafficking, or evasion advice.",
+            "For emergency signs, tell the user to call local emergency services immediately.",
+            "",
+            `Task: ${title}`
+        ].join("\n");
+    }
+
+    function substanceBlock(summary, route) {
+        if (!summary) return "- substance card unavailable";
+        const routeData = route && summary.routeSummaries ? summary.routeSummaries[route] : null;
+        const dosage = routeData && routeData.dosage ? routeData.dosage : null;
+        const durations = routeData && routeData.durations ? routeData.durations : null;
+        const risk = (summary.risk_factors || []).slice(0, 3).join(" | ");
+        const avoid = (summary.avoid_if || []).slice(0, 2).join(" | ");
+        const rules = (summary.rdr_rules || []).slice(0, 3).join(" | ");
+        return [
+            `${summary.name} (${summary.category || "unknown"})`,
+            `route: ${route || "unknown"}`,
+            dosage ? `dosage markers: threshold ${dosage.threshold}; light ${dosage.light}; common ${dosage.common}; strong ${dosage.strong}; heavy ${dosage.heavy}; unit ${dosage.unit}` : "",
+            durations ? `timeline seconds: onset ${durations.onset}; comeup ${durations.comeup}; peak ${durations.peak}; offset ${durations.offset}; total ${durations.total}` : "",
+            routeData ? `bioavailability: ${routeData.bioavailability}` : "",
+            summary.metabolism ? `metabolism: ${summary.metabolism}` : "",
+            risk ? `risk factors: ${risk}` : "",
+            avoid ? `avoid if: ${avoid}` : "",
+            rules ? `harm-reduction rules: ${rules}` : ""
+        ].filter(Boolean).join("\n");
+    }
+
+    function buildPrompt(title, sections) {
+        return clampText([promptHeader(title), ...sections].join("\n\n"), PROMPT_LIMIT);
+    }
+
+    function promptSessionAnalysis() {
+        const snapshot = getSnapshot();
+        const session = snapshot.activeSession;
+        if (!session) return null;
+        const summary = getSubstanceSummary(session.substanceKey);
+        return buildPrompt("Analyze the active session and highlight immediate safety priorities.", [
+            "Active session:",
+            `substance: ${session.substanceName}; route: ${session.route}; dose cumulative: ${formatDose(session)}; set/setting: ${session.setSetting || "-"}`,
+            `started: ${formatDateTime(session.startTime)}`,
+            (session.extraSubstances || []).length ? `additional tracked substances: ${session.extraSubstances.map((s) => `${s.name} ${s.cumulativeDose || "?"} ${s.unit || ""} via ${s.route || "?"}`).join("; ")}` : "additional tracked substances: none",
+            "Recent log:",
+            formatLogLines(session, 8),
+            "Reference card:",
+            substanceBlock(summary, session.route),
+            "Return: current risk level, redose caution, concrete signs to watch, and recovery/next-step advice."
+        ]);
+    }
+
+    function promptPreSession() {
+        const subKey = $("substance-select") ? $("substance-select").value : "";
+        const customName = $("input-custom-substance") ? $("input-custom-substance").value.trim() : "";
+        const summary = getSubstanceSummary(subKey);
+        const dose = $("input-dosage") ? $("input-dosage").value : "";
+        const unit = $("unit-select") ? $("unit-select").value : "";
+        const route = $("route-select") ? $("route-select").value : "";
+        const setSetting = $("input-set-setting") ? $("input-set-setting").value : "";
+        const notes = $("input-session-notes") ? $("input-session-notes").value.trim() : "";
+        if ((!subKey && !customName) || !dose) return null;
+        const sessions = getSnapshot().sessions || [];
+        const recent = sessions.slice(0, 5).map((s) => `${formatDateTime(s.startTime)}: ${s.substanceName} ${formatDose(s)} via ${s.route}`).join("\n") || "- none";
+        return buildPrompt("Review the planned session before it starts.", [
+            "Planned input:",
+            `substance: ${summary ? summary.name : (customName || subKey || "not selected")}`,
+            `dose entered: ${dose || "not entered"} ${unit || ""}; route: ${route || "not selected"}; set/setting: ${setSetting || "-"}`,
+            notes ? `context notes: ${notes}` : "context notes: none",
+            "Recent sessions:",
+            recent,
+            "Reference card:",
+            substanceBlock(summary, route),
+            "Return: whether the entered plan contains obvious risk flags, what to slow down/check, and when professional or emergency help is relevant."
+        ]);
+    }
+
+    function promptComparison() {
+        const snapshot = getSnapshot();
+        const keys = snapshot.compareSelection || [];
+        if (keys.length < 2) return null;
+        const cards = keys.map((key) => {
+            const summary = getSubstanceSummary(key);
+            const route = summary && summary.routes ? summary.routes[0] : "";
+            return substanceBlock(summary, route);
+        }).join("\n\n---\n\n");
+        return buildPrompt("Compare selected effect curves for educational harm-reduction context.", [
+            "Selected cards:",
+            cards,
+            "Return: differences in onset, peak, total duration, redose traps, fatigue/recovery burden, and clear reminder not to treat overlap as safe."
+        ]);
+    }
+
+    function promptInteraction() {
+        const key1 = $("inter-select-1") ? $("inter-select-1").value : "";
+        const key2 = $("inter-select-2") ? $("inter-select-2").value : "";
+        if (!key1 || !key2) return null;
+        const s1 = getSubstanceSummary(key1);
+        const s2 = getSubstanceSummary(key2);
+        const title = $("inter-result-title") ? $("inter-result-title").textContent.trim() : "";
+        const note = $("inter-result-note") ? $("inter-result-note").textContent.trim() : "";
+        return buildPrompt("Explain the selected combination soberly.", [
+            "Combination:",
+            substanceBlock(s1, s1 && s1.routes ? s1.routes[0] : ""),
+            substanceBlock(s2, s2 && s2.routes ? s2.routes[0] : ""),
+            "Seuil interaction result:",
+            `${title || "not calculated"} - ${note || "no displayed note"}`,
+            "Return: main mechanisms/risks, danger signs, what to avoid, and when to seek urgent help. Do not give instructions to perform the combination."
+        ]);
+    }
+
+    function promptTrends() {
+        const sessions = (getSnapshot().sessions || []).slice(0, 20);
+        if (!sessions.length) return null;
+        const lines = sessions.map((s) => `- ${formatDateTime(s.startTime)} | ${s.substanceName} | ${formatDose(s)} | ${s.route} | ${s.setSetting || "-"}`).join("\n");
+        return buildPrompt("Read recent tracking trends and highlight harm-reduction signals.", [
+            `Closed sessions reviewed: ${sessions.length}`,
+            lines,
+            "Return: spacing, repetition, escalation, risky proximity, recovery burden, and 2-4 practical changes. Avoid moralizing."
+        ]);
+    }
+
+    function promptDebrief() {
+        const session = (getSnapshot().sessions || [])[0];
+        if (!session) return null;
+        const summary = getSubstanceSummary(session.substanceKey);
+        return buildPrompt("Debrief the most recent closed session.", [
+            "Closed session:",
+            `substance: ${session.substanceName}; route: ${session.route}; cumulative dose: ${formatDose(session)}; set/setting: ${session.setSetting || "-"}`,
+            `started: ${formatDateTime(session.startTime)}; ended: ${formatDateTime(session.endTime)}`,
+            "Log:",
+            formatLogLines(session, 10),
+            "Reference card:",
+            substanceBlock(summary, session.route),
+            "Return: what went well from a safety perspective, warning points, recovery advice, and next-session safeguards."
+        ]);
+    }
+
+    async function callAi(prompt) {
+        const response = await fetch("/api/ai/analyze", {
+            method: "POST",
+            credentials: "same-origin",
+            cache: "no-store",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "X-Seuil-Csrf": "1"
+            },
+            body: JSON.stringify({ prompt })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.ok) {
+            throw new Error(payload.error || "Assistant indisponible.");
+        }
+        return payload.output || "";
+    }
+
+    function setStatus(text, tone) {
+        const status = $("ai-assistant-status");
+        if (!status) return;
+        status.textContent = text ? aiText(text) : "";
+        status.style.color = tone === "error" ? "#fca5a5" : "";
+    }
+
+    function setLoading(loading) {
+        const button = $("ai-assistant-submit");
+        const input = $("ai-assistant-input");
+        if (button) {
+            button.disabled = loading;
+            button.textContent = aiText(loading ? "Réponse en cours..." : "Demander à l’assistant");
+        }
+        if (input) input.disabled = loading;
+    }
+
+    function renderMarkdownLite(text) {
+        return escapeHtml(text)
+            .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    }
+
+    function showResult(text) {
+        const result = $("ai-assistant-result");
+        if (!result) return;
+        result.hidden = false;
+        result.innerHTML = renderMarkdownLite(text);
+    }
+
+    function openContextPanel(title, subtitle, body, loading) {
+        const panel = $("ai-context-panel");
+        const titleEl = $("ai-context-title");
+        const subtitleEl = $("ai-context-subtitle");
+        const result = $("ai-context-result");
+        if (!panel || !result) return;
+        if (titleEl) titleEl.textContent = aiText(title || "Résultat IA");
+        if (subtitleEl) subtitleEl.textContent = aiText(subtitle || "Analyse générée à partir des informations visibles dans votre coffre déverrouillé.");
+        result.innerHTML = renderMarkdownLite(body || "");
+        panel.hidden = false;
+        panel.classList.toggle("is-loading", !!loading);
+        if (!loading) panel.focus?.();
+    }
+
+    function closeContextPanel() {
+        const panel = $("ai-context-panel");
+        if (panel) panel.hidden = true;
+    }
+
+    async function runContextualAnalysis(title, subtitle, promptFactory, missingMessage) {
+        const prompt = typeof promptFactory === "function" ? promptFactory() : "";
+        if (!prompt) {
+            openContextPanel(title, subtitle, aiText(missingMessage || "Pas assez d'informations à analyser."), false);
+            return;
+        }
+        openContextPanel(title, subtitle, aiText("Réponse en cours..."), true);
+        try {
+            const output = await callAi(prompt);
+            openContextPanel(title, subtitle, output || aiText("Réponse IA vide."), false);
+        } catch (err) {
+            openContextPanel(title, subtitle, err && err.message ? err.message : aiText("Assistant indisponible."), false);
+        }
+    }
+
+    async function refreshStatus() {
+        try {
+            const response = await fetch("/api/ai/status", {
+                credentials: "same-origin",
+                cache: "no-store",
+                headers: { "Accept": "application/json" }
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (response.ok && payload.configured) {
+                setStatus("Assistant disponible.");
+                return true;
+            }
+        } catch (_) {
+            // Statut informatif uniquement.
+        }
+        setStatus("Assistant indisponible.", "error");
+        return false;
+    }
+
+    async function submitQuestion(event) {
+        event.preventDefault();
+        const input = $("ai-assistant-input");
+        const question = input ? input.value.trim() : "";
+        if (question.length < 4) {
+            setStatus("Question trop courte.", "error");
+            return;
+        }
+
+        const prompt = buildPrompt("Answer a free harm-reduction question.", [
+            "User question:",
+            question
+        ]);
+
+        setLoading(true);
+        setStatus("Réponse en cours...");
+        try {
+            const output = await callAi(prompt);
+            showResult(output || "");
+            setStatus("Réponse générée.");
+        } catch (err) {
+            setStatus(err && err.message ? err.message : "Assistant indisponible.", "error");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function bindContextButton(id, title, subtitle, promptFactory, missingMessage) {
+        const button = $(id);
+        if (!button) return;
+        button.addEventListener("click", () => runContextualAnalysis(title, subtitle, promptFactory, missingMessage));
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const form = $("ai-assistant-form");
+        if (form) form.addEventListener("submit", submitQuestion);
+        const close = $("ai-context-close");
+        if (close) close.addEventListener("click", closeContextPanel);
+
+        bindContextButton("btn-ai-presession", "Avant de démarrer", "Lecture prudente des informations saisies.", promptPreSession, "Renseignez au moins une substance et une dose avant de demander une lecture IA.");
+        bindContextButton("btn-ai-session", "Analyser la session", "Synthèse de la session active et des signaux à surveiller.", promptSessionAnalysis, "Aucune session active à analyser.");
+        bindContextButton("btn-ai-comparison", "Lire les courbes", "Comparaison pédagogique des courbes sélectionnées.", promptComparison, "Sélectionnez au moins deux substances dans le comparateur.");
+        bindContextButton("btn-ai-interaction", "Lire le mélange", "Explication prudente du résultat d'interaction.", promptInteraction, "Sélectionnez deux substances dans l'analyseur de mélanges.");
+        bindContextButton("btn-ai-trends", "Lire les tendances", "Lecture synthétique des sessions clôturées récentes.", promptTrends, "Pas encore assez de sessions clôturées à analyser.");
+        bindContextButton("btn-ai-debrief", "Débrief dernière session", "Retour court sur la dernière session clôturée.", promptDebrief, "Aucune session clôturée à débriefer.");
+
+        refreshStatus();
     });
-    const d = await res.json();
-    if (!d.ok) throw new Error(d.error || "Échec de l'analyse IA.");
-    return d.output;
-  }
 
-  const PREAMBLE =
-    "Tu es un assistant spécialisé en réduction des risques liés aux substances psychoactives. " +
-    "Réponds en français, factuel, non-jugeant, orienté sécurité et concret (puces). Tu n'encourages pas la consommation : " +
-    "tu aides à en réduire les risques. Tu ne remplaces pas un avis médical ; en cas d'urgence, appeler le 15 / 112.";
-
-  function promptSessionAnalysis(session, subInfo) {
-    const L = [PREAMBLE, "", "## Session de consommation en cours",
-      `Substance : ${subInfo ? subInfo.name : session.substanceName} (${subInfo ? subInfo.category : "?"})`,
-      `Voie : ${session.route} · Set & setting : ${session.setSetting}`,
-      `Dose initiale : ${session.initialDose} ${session.unit} · Cumulée : ${session.cumulativeDose} ${session.unit}`,
-      "Journal :"];
-    (session.logs || []).forEach(l => L.push(`- ${new Date(l.time).toLocaleTimeString("fr-FR")} · ${l.type} · ${l.note || (l.dose + " " + session.unit)}`));
-    if (subInfo && subInfo.rdr_rules) L.push("", "Règles de réduction des risques connues : " + subInfo.rdr_rules.join(" | "));
-    L.push("", "Analyse : phase actuelle de la courbe, risques à surveiller maintenant, prudence du redosage, conseils pour la suite et la récupération.");
-    return L.join("\n");
-  }
-
-  function promptPreSession(p, subInfo, recent) {
-    const L = [PREAMBLE, "", "## Contrôle de risque AVANT une prise",
-      `Substance : ${subInfo ? subInfo.name : p.name}`,
-      `Dose prévue : ${p.dose} ${p.unit} · Voie : ${p.route} · Set & setting : ${p.setSetting}`];
-    if (subInfo && subInfo.dosages) L.push(`Paliers : seuil ${subInfo.dosages.threshold}, léger ${subInfo.dosages.light}, commun ${subInfo.dosages.common}, fort ${subInfo.dosages.strong}, intense ${subInfo.dosages.heavy}`);
-    if (recent && recent.length) L.push("Historique récent : " + recent.map(r => `${r.name} (${new Date(r.startTime).toLocaleDateString("fr-FR")})`).join(", "));
-    if (subInfo && subInfo.rdr_rules) L.push("Règles de réduction des risques : " + subInfo.rdr_rules.join(" | "));
-    L.push("", "Évalue le risque (dose vs paliers, voie, set/setting, fréquence/tolérance), liste les précautions prioritaires, et dis si réduire/renoncer serait plus sûr.");
-    return L.join("\n");
-  }
-
-  function promptAssistant(q) {
-    return [PREAMBLE, "", "## Question de réduction des risques", q, "", "Réponds de façon pratique."].join("\n");
-  }
-
-  function promptInteraction(s1, s2, known) {
-    const L = [PREAMBLE, "", "## Décryptage d'un mélange de substances",
-      `Substance A : ${s1 ? s1.name : "?"} (${s1 ? s1.category : "?"})`,
-      `Substance B : ${s2 ? s2.name : "?"} (${s2 ? s2.category : "?"})`];
-    if (known) L.push(`Donnée d'interaction connue : ${known.category} - ${known.note || ""}`);
-    [["A", s1], ["B", s2]].forEach(([tag, s]) => {
-      if (s && s.rdr_rules) L.push(`Règles de réduction des risques ${tag} : ${s.rdr_rules.slice(0, 3).join(" | ")}`);
-    });
-    L.push("", "Explique les risques de ce mélange (mécanismes, dangers spécifiques, signaux d'alerte) et les mesures de réduction des risques. Si l'association est dangereuse ou mortelle, dis-le clairement.");
-    return L.join("\n");
-  }
-
-  function summarizeHistory(sessions) {
-    const byName = {};
-    sessions.forEach(s => { const n = s.substanceName || "?"; byName[n] = (byName[n] || 0) + 1; });
-    const lines = sessions.slice(0, 25).map(s => `- ${new Date(s.startTime).toLocaleString("fr-FR")} · ${s.substanceName} · ${s.cumulativeDose} ${s.unit}`);
-    const counts = Object.entries(byName).sort((a, b) => b[1] - a[1]).map(([n, c]) => `${n} ×${c}`).join(", ");
-    return { counts, lines };
-  }
-
-  function promptTrends(sessions) {
-    if (!sessions || !sessions.length) return null;
-    const { counts, lines } = summarizeHistory(sessions);
-    return [PREAMBLE, "", "## Analyse de tendances de consommation",
-      `Total de sessions : ${sessions.length}. Répartition : ${counts}.`,
-      "Sessions (récentes d'abord) :", ...lines, "",
-      "Analyse : fréquence, espacement, signes d'escalade de doses, signaux de tolérance ou de perte de contrôle. Propose des repères concrets de réduction des risques (espacement, pauses, limites)."].join("\n");
-  }
-
-  function promptDebrief(session) {
-    if (!session) return null;
-    const L = [PREAMBLE, "", "## Débrief d'une session terminée",
-      `Substance : ${session.substanceName} · Dose cumulée : ${session.cumulativeDose} ${session.unit} · Voie : ${session.route}`,
-      `Début : ${new Date(session.startTime).toLocaleString("fr-FR")}` + (session.endTime ? ` · Fin : ${new Date(session.endTime).toLocaleString("fr-FR")}` : ""),
-      "Journal :"];
-    (session.logs || []).forEach(l => L.push(`- ${new Date(l.time).toLocaleTimeString("fr-FR")} · ${l.type} · ${l.note || (l.dose + " " + session.unit)}`));
-    L.push("", "Fais un débrief bienveillant : ce qui s'est bien passé côté sécurité, les points de vigilance, et 2-3 pistes concrètes pour réduire les risques la prochaine fois (récupération, espacement, hydratation, set & setting).");
-    return L.join("\n");
-  }
-
-  function promptComparison(subs) {
-    if (!subs || subs.length < 2) return null;
-    const L = [PREAMBLE, "", "## Comparaison de substances",
-      "Substances comparées : " + subs.map(s => s.name).join(", "), ""];
-    subs.forEach(s => {
-      L.push(`### ${s.name} (${s.category})`);
-      if (s.durations) L.push(`Durées : montée ${s.durations.onset}, plateau ${s.durations.peak}, total ${s.durations.total}`);
-      if (s.dosages) L.push(`Paliers : commun ${s.dosages.common}, fort ${s.dosages.strong}`);
-    });
-    L.push("", "Compare montée/plateau/durée et profils de risque. Souligne les différences pertinentes pour la réduction des risques (durée d'immobilisation, fenêtres de redosage, cumul de fatigue), sans jamais conseiller de mélange.");
-    return L.join("\n");
-  }
-
-  window.RDR_AI = { state: AI, detectBridge, callBridge, promptSessionAnalysis, promptPreSession, promptAssistant, promptInteraction, promptTrends, promptDebrief, promptComparison };
-})();
-
-/* ---- UI IA : modale, déclencheurs, réglages, consentement ---- */
-(function () {
-  "use strict";
-  const AI_MAINTENANCE = true;
-  const AI_MAINTENANCE_MESSAGE = "Assistant IA en maintenance temporaire.";
-  const AI = window.RDR_AI;
-  const $ = id => document.getElementById(id);
-  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const aiText = key => (typeof window.t === "function" ? window.t(key) : key);
-
-  function aiEnabled() { return !!(typeof appState !== "undefined" && appState.aiSettings && appState.aiSettings.enabled); }
-  function saveAiSettings() { if (typeof saveLocalData === "function") saveLocalData(); }
-
-  function renderMd(t) {
-    return esc(t).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-      .replace(/^\s*[-*]\s+(.*)$/gm, "• $1").replace(/\n/g, "<br>");
-  }
-
-  let currentPrompt = "";
-  function openModal(title, sub, prompt) {
-    currentPrompt = prompt;
-    $("ai-title").textContent = title;
-    $("ai-sub").textContent = sub;
-    $("ai-prompt").value = prompt;
-    $("ai-result").style.display = "none"; $("ai-result").innerHTML = "";
-    const prov = AI.state.provider;
-    $("ai-provider-row").innerHTML = AI.state.bridge
-      ? `Pont local actif · fournisseur : <strong>${esc(prov || "aucun CLI détecté")}</strong>`
-      : "Pont local indisponible - copiez le prompt dans votre Claude Code / Codex / claude.ai.";
-    const actions = $("ai-actions"); actions.innerHTML = "";
-    if (AI.state.bridge && prov) {
-      const run = document.createElement("button");
-      run.className = "btn btn-primary"; run.textContent = "Lancer l'analyse";
-      run.onclick = async () => {
-        run.disabled = true; run.textContent = "Analyse en cours…";
-        const r = $("ai-result"); r.style.display = "block"; r.innerHTML = '<span style="color:var(--color-text-muted)">…</span>';
-        try { r.innerHTML = renderMd(await AI.callBridge(prompt)); }
-        catch (e) { r.innerHTML = '<span style="color:#fca5a5">' + esc(e.message) + "</span>"; }
-        run.disabled = false; run.textContent = "Relancer";
-      };
-      actions.appendChild(run);
-    }
-    $("ai-modal").classList.add("open");
-  }
-
-  async function withConsent(fn) {
-    if (AI_MAINTENANCE) { alert(aiText(AI_MAINTENANCE_MESSAGE)); return; }
-    if (!aiEnabled()) { alert("Activez d'abord l'assistant IA dans Paramètres."); return; }
-    if (!appState.aiSettings.consented) {
-      if (!confirm("Analyse IA : les données concernées seront envoyées à votre fournisseur IA via votre CLI local - elles quittent l'appareil. Le reste de l'app demeure local. Continuer ?")) return;
-      appState.aiSettings.consented = true; saveAiSettings();
-    }
-    if (!AI.state.ready) await AI.detectBridge();
-    fn();
-  }
-
-  function recentSessions(n) {
-    return (appState.sessions || []).slice(0, n).map(s => ({ name: s.substanceName, startTime: s.startTime }));
-  }
-
-  function wire() {
-    if (!$("ai-modal")) return;
-    if (AI_MAINTENANCE) {
-      disableAiUi();
-      return;
-    }
-    $("ai-close").onclick = () => $("ai-modal").classList.remove("open");
-    $("ai-modal").onclick = e => { if (e.target.id === "ai-modal") $("ai-modal").classList.remove("open"); };
-    $("ai-copy").onclick = () => {
-      if (navigator.clipboard) navigator.clipboard.writeText(currentPrompt);
-      $("ai-copy").textContent = "Copié"; setTimeout(() => $("ai-copy").textContent = "Copier le prompt", 1500);
+    window.SeuilAI = {
+        aiText,
+        refreshStatus,
+        callAi,
+        promptSessionAnalysis,
+        promptPreSession,
+        promptComparison,
+        promptInteraction,
+        promptTrends,
+        promptDebrief
     };
-
-    const btnS = $("btn-ai-session");
-    if (btnS) btnS.onclick = () => withConsent(() => {
-      const s = appState.activeSession; if (!s) return alert("Aucune session active.");
-      const sub = getMergedSubstanceDb()[s.substanceKey];
-      openModal("Analyse de la session", "Analyse de la courbe et des risques en cours.", AI.promptSessionAnalysis(s, sub));
-    });
-
-    const btnP = $("btn-ai-presession");
-    if (btnP) btnP.onclick = () => withConsent(() => {
-      const key = $("substance-select").value;
-      const sub = getMergedSubstanceDb()[key];
-      const p = { name: sub ? sub.name : (($("input-custom-substance") || {}).value || "?"),
-        dose: ($("input-dosage") || {}).value || "?", unit: ($("unit-display") || {}).value || "mg",
-        route: ($("route-select") || {}).value, setSetting: ($("input-set-setting") || {}).value };
-      openModal("Contrôle de risque pré-session", "Évaluation avant de démarrer.", AI.promptPreSession(p, sub, recentSessions(5)));
-    });
-
-    const btnA = $("btn-ai-assistant");
-    if (btnA) btnA.onclick = () => withConsent(() => {
-      const q = window.prompt("Votre question de réduction des risques :");
-      if (q) openModal("Assistant", "Question libre.", AI.promptAssistant(q));
-    });
-
-    const enable = $("ai-enable"), detail = $("ai-settings-detail");
-    if (enable) {
-      if (!appState.aiSettings) appState.aiSettings = { enabled: false, provider: null, consented: false };
-      enable.checked = aiEnabled(); if (detail) detail.style.display = enable.checked ? "block" : "none";
-      enable.onchange = () => { appState.aiSettings.enabled = enable.checked; if (detail) detail.style.display = enable.checked ? "block" : "none"; saveAiSettings(); if (enable.checked && !AI.state.ready) AI.detectBridge(); };
-      const provSel = $("ai-provider-select");
-      if (provSel) {
-        provSel.value = appState.aiSettings.provider || AI.state.provider || "claude";
-        provSel.onchange = () => { appState.aiSettings.provider = provSel.value; AI.state.provider = provSel.value; saveAiSettings(); };
-      }
-      const test = $("ai-test");
-      if (test) test.onclick = async () => {
-        await AI.detectBridge();
-        $("ai-status-text").textContent = AI.state.bridge
-          ? `Pont OK · CLI : ${Object.keys(AI.state.clis).filter(k => AI.state.clis[k]).join(", ") || "aucun"}`
-          : "Pont indisponible (lancez l'app via run.bat / serve.py).";
-      };
-    }
-
-    const btnI = $("btn-ai-interaction");
-    if (btnI) btnI.onclick = () => withConsent(() => {
-      const db = getMergedSubstanceDb();
-      const k1 = ($("inter-select-1") || {}).value, k2 = ($("inter-select-2") || {}).value;
-      if (!k1 || !k2) return alert("Sélectionnez deux substances dans le calculateur d'interactions.");
-      let known = null;
-      try { known = (typeof INTERACTION_MATRIX !== "undefined") && ((INTERACTION_MATRIX[k1] && INTERACTION_MATRIX[k1][k2]) || (INTERACTION_MATRIX[k2] && INTERACTION_MATRIX[k2][k1])) || null; } catch (_) {}
-      openModal("Décryptage d'interaction", "Analyse d'un mélange.", AI.promptInteraction(db[k1], db[k2], known));
-    });
-
-    const btnC = $("btn-ai-comparison");
-    if (btnC) btnC.onclick = () => withConsent(() => {
-      const sel = (typeof window.getCompareSelection === "function") ? window.getCompareSelection() : [];
-      if (sel.length < 2) return alert("Ajoutez au moins deux substances au comparateur.");
-      const db = getMergedSubstanceDb();
-      openModal("Comparaison de substances", "Lecture comparée des courbes.", AI.promptComparison(sel.map(k => db[k]).filter(Boolean)));
-    });
-
-    const btnT = $("btn-ai-trends");
-    if (btnT) btnT.onclick = () => withConsent(() => {
-      const p = AI.promptTrends(appState.sessions || []);
-      if (!p) return alert("Aucune session enregistrée à analyser.");
-      openModal("Analyse de tendances", "Lecture de votre historique.", p);
-    });
-
-    const btnD = $("btn-ai-debrief");
-    if (btnD) btnD.onclick = () => withConsent(() => {
-      const last = (appState.sessions || [])[0];
-      const p = AI.promptDebrief(last);
-      if (!p) return alert("Aucune session terminée à débriefer.");
-      openModal("Débrief de session", "Dernière session terminée.", p);
-    });
-  }
-
-  function disableAiUi() {
-    AI.bridge = false;
-    AI.clis = { claude: false, codex: false };
-    AI.token = null;
-    AI.provider = null;
-    AI.ready = true;
-
-    ["btn-ai-session", "btn-ai-presession", "btn-ai-comparison", "btn-ai-interaction", "btn-ai-trends", "btn-ai-debrief", "btn-ai-assistant", "ai-test"]
-      .forEach(id => {
-        const btn = $(id);
-        if (!btn) return;
-        btn.disabled = true;
-        btn.title = aiText(AI_MAINTENANCE_MESSAGE);
-        btn.style.cursor = "not-allowed";
-        btn.style.opacity = "0.55";
-      });
-
-    const enable = $("ai-enable");
-    if (enable) {
-      enable.checked = false;
-      enable.disabled = true;
-      enable.title = aiText(AI_MAINTENANCE_MESSAGE);
-      enable.style.cursor = "not-allowed";
-      if (typeof appState !== "undefined" && appState.aiSettings) {
-        appState.aiSettings.enabled = false;
-      }
-    }
-    const provider = $("ai-provider-select");
-    if (provider) provider.disabled = true;
-    const detail = $("ai-settings-detail");
-    if (detail) detail.style.display = "block";
-    const status = $("ai-status-text");
-    if (status) status.textContent = aiText(AI_MAINTENANCE_MESSAGE);
-  }
-
-  // Détection paresseuse : on ne sonde le pont que si l'IA est activée (sinon : aucune requête, console propre en statique).
-  document.addEventListener("DOMContentLoaded", async () => { wire(); if (aiEnabled()) await AI.detectBridge(); });
 })();

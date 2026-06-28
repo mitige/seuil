@@ -1,19 +1,20 @@
-const CACHE_NAME = "seuil-v2.3.105";
+const CACHE_NAME = "seuil-v2.3.110";
 const NETWORK_TIMEOUT_MS = 4500;
 const CORE_ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=29",
-  "./i18n.js?v=49",
+  "./styles.css?v=33",
+  "./i18n.js?v=52",
   "./boot.js?v=7",
   "./ui.js?v=3",
-  "./app.js?v=99",
+  "./app.js?v=104",
+  "./ai.js?v=8",
   "./auth.js?v=19",
-  "./psychonaut-data.js?v=4",
-  "./index-substances.js?v=8",
+  "./psychonaut-data.js?v=5",
+  "./index-substances.js?v=9",
   "./substances-data.js?v=4",
   "./route-model.js?v=15",
-  "./db.js?v=13",
+  "./db.js?v=14",
   "./favicon.svg",
   "./manifest.webmanifest",
   "./fonts/space-grotesk-latin.woff2",

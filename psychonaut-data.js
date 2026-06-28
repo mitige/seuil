@@ -6,6 +6,31 @@
 (function (global) {
     "use strict";
 
+    var LP_CRUSH_WARNING = "Ne pas écraser, couper, mâcher, dissoudre ou injecter une forme LP.";
+    var LP_CONVERSION_BLOCK = "Prescription uniquement - ne pas convertir LI vers LP";
+
+    function prescriptionOnlyDosage() {
+        return {
+            "threshold": "Prescription uniquement",
+            "light": "Prescription uniquement",
+            "common": LP_CONVERSION_BLOCK,
+            "strong": "Prescription uniquement - risque de surdose",
+            "heavy": "Prescription uniquement - risque élevé"
+        };
+    }
+
+    function releaseProfile(name, route, bioavailability, timeline, dosage, note, warning) {
+        return {
+            "name": name,
+            "route": route,
+            "bioavailability": bioavailability,
+            "timeline": timeline,
+            "dosage": dosage,
+            "note": note,
+            "warning": warning
+        };
+    }
+
     var OVERRIDES = {
     "benzodiazepines": {
         "omit_quantitative_tables": true
@@ -444,7 +469,28 @@
                 "offset": 10800,
                 "total": 10800
             }
-        }
+        },
+        "metabolism": "Métabolisme principalement par CES1 en acide ritalinique, peu ou pas actif. Variabilité individuelle et interactions possibles, surtout avec traitements ou alcool.",
+        "release_profiles": [
+            releaseProfile(
+                "Libération immédiate (LI)",
+                "Oral",
+                "≈ 20 - 40 % (voie orale, forte variabilité individuelle)",
+                { "onset": "30 - 60 min", "comeup": "20 - 45 min", "peak": "60 - 90 min", "offset": "45 - 60 min", "total": "2,5 - 4 h" },
+                { "threshold": "5 mg", "light": "10 - 20 mg", "common": "20 - 40 mg", "strong": "40 - 60 mg", "heavy": "60 mg +" },
+                "Repères LI issus de la fiche principale.",
+                ""
+            ),
+            releaseProfile(
+                "Libération prolongée (LP)",
+                "Oral",
+                "Biodisponibilité orale globale proche de la LI, mais libération étalée selon la spécialité.",
+                { "onset": "30 - 90 min", "comeup": "1 - 3 h", "peak": "4 - 8 h", "offset": "2 - 6 h", "total": "8 - 12 h selon formulation" },
+                prescriptionOnlyDosage(),
+                "Forme médicale à profil étalé : ne pas convertir une quantité LI en quantité LP.",
+                LP_CRUSH_WARNING
+            )
+        ]
     },
     "modafinil": {
         "data_source": "PsychonautWiki API",
@@ -1576,7 +1622,28 @@
                 "value": "70 - 90 %",
                 "source": "PsychonautWiki API"
             }
-        }
+        },
+        "metabolism": "Métabolisme hépatique par CYP2D6, CYP3A4 et CYP2B6 ; O-desméthyltramadol actif. Variabilité génétique, interactions sérotoninergiques et risque de convulsions importants.",
+        "release_profiles": [
+            releaseProfile(
+                "Libération immédiate (LI)",
+                "Oral",
+                "70 - 90 %",
+                { "onset": "15 - 60 min", "comeup": "30 - 60 min", "peak": "2 - 6 h", "offset": "2 - 4 h", "total": "6 - 10 h" },
+                { "threshold": "25 mg", "light": "25 - 100 mg", "common": "100 - 250 mg", "strong": "250 - 300 mg", "heavy": "300 mg +" },
+                "Repères LI issus de la fiche principale.",
+                ""
+            ),
+            releaseProfile(
+                "Libération prolongée (LP)",
+                "Oral",
+                "Biodisponibilité orale comparable, avec absorption étalée et accumulation possible.",
+                { "onset": "1 - 2 h", "comeup": "2 - 4 h", "peak": "4 - 8 h", "offset": "8 - 16 h", "total": "12 - 24 h ou plus selon formulation" },
+                prescriptionOnlyDosage(),
+                "Forme médicale à durée longue : risque retardé de sédation, convulsions et interactions.",
+                LP_CRUSH_WARNING
+            )
+        ]
     },
     "ghb": {
         "data_source": "PsychonautWiki API",
@@ -2260,7 +2327,28 @@
                 "offset": 4860,
                 "total": 14400
             }
-        }
+        },
+        "metabolism": "Métabolisme hépatique surtout CYP3A4 et CYP2D6, élimination urinaire sous forme de métabolites. Interactions fortes avec inhibiteurs/inducteurs CYP3A4 et dépresseurs.",
+        "release_profiles": [
+            releaseProfile(
+                "Libération immédiate (LI)",
+                "Oral",
+                "60 - 87 %",
+                { "onset": "10 - 30 min", "comeup": "60 - 120 min", "peak": "1 - 2 h", "offset": "0 - 2 h", "total": "4 - 8 h" },
+                { "threshold": "1 mg", "light": "2,5 - 10 mg", "common": "10 - 25 mg", "strong": "25 - 40 mg", "heavy": "40 mg +" },
+                "Repères LI issus de la fiche principale.",
+                ""
+            ),
+            releaseProfile(
+                "Libération prolongée (LP)",
+                "Oral",
+                "60 - 87 %, biodisponibilité orale relative proche de la LI mais libération étalée.",
+                { "onset": "1 - 2 h", "comeup": "2 - 4 h", "peak": "3 - 6 h", "offset": "6 - 12 h", "total": "12 h ou plus selon formulation" },
+                prescriptionOnlyDosage(),
+                "Forme médicale à action prolongée : la sédation et la dépression respiratoire peuvent être retardées.",
+                LP_CRUSH_WARNING
+            )
+        ]
     },
     "phenibut": {
         "data_source": "PsychonautWiki API",
@@ -5528,7 +5616,28 @@
                 "value": "35 - 40 %",
                 "source": "PsychonautWiki API"
             }
-        }
+        },
+        "metabolism": "Métabolisme hépatique par glucuronidation, surtout en M3G et M6G, puis élimination rénale. Accumulation possible en insuffisance rénale.",
+        "release_profiles": [
+            releaseProfile(
+                "Libération immédiate (LI)",
+                "Oral",
+                "20 - 40 %",
+                { "onset": "10 - 30 min", "comeup": "20 - 40 min", "peak": "2 - 3 h", "offset": "1 - 2 h", "total": "4 - 6 h" },
+                { "threshold": "10 mg", "light": "10 - 15 mg", "common": "15 - 20 mg", "strong": "20 - 30 mg", "heavy": "30 mg +" },
+                "Repères LI issus de la fiche principale.",
+                ""
+            ),
+            releaseProfile(
+                "Libération prolongée (LP)",
+                "Oral",
+                "20 - 40 %, absorption étalée selon la formulation.",
+                { "onset": "1 - 2 h", "comeup": "2 - 4 h", "peak": "4 - 8 h", "offset": "8 - 16 h", "total": "12 - 24 h selon formulation" },
+                prescriptionOnlyDosage(),
+                "Forme médicale à action prolongée : le risque respiratoire peut durer plus longtemps que l'effet ressenti.",
+                LP_CRUSH_WARNING
+            )
+        ]
     },
     "methadone": {
         "data_source": "PsychonautWiki API",
@@ -5720,7 +5829,28 @@
                 "offset": 5400,
                 "total": 12600
             }
-        }
+        },
+        "metabolism": "Métabolisme hépatique principalement par glucuronidation en hydromorphone-3-glucuronide, élimination surtout rénale. Prudence accrue en insuffisance rénale ou hépatique.",
+        "release_profiles": [
+            releaseProfile(
+                "Libération immédiate (LI)",
+                "Oral",
+                "≈ 20 - 30 % (voie orale, forte variabilité)",
+                { "onset": "5 - 15 min", "comeup": "1 - 2 h", "peak": "15 - 20 min", "offset": "30 - 60 min", "total": "4 - 6 h" },
+                { "threshold": "0,5 mg", "light": "1 - 2 mg", "common": "2 - 4 mg", "strong": "4 - 8 mg", "heavy": "8 mg +" },
+                "Repères LI issus de la fiche principale.",
+                ""
+            ),
+            releaseProfile(
+                "Libération prolongée (LP)",
+                "Oral",
+                "≈ 20 - 30 %, absorption étalée selon la formulation.",
+                { "onset": "1 - 3 h", "comeup": "4 - 8 h", "peak": "12 - 18 h", "offset": "8 - 16 h", "total": "24 h ou plus selon formulation" },
+                prescriptionOnlyDosage(),
+                "Forme médicale réservée aux personnes déjà tolérantes selon prescription : risque vital sans tolérance.",
+                LP_CRUSH_WARNING
+            )
+        ]
     },
     "tapentadol": {
         "data_source": "PsychonautWiki API",
@@ -5762,7 +5892,28 @@
                 "offset": 9000,
                 "total": 18000
             }
-        }
+        },
+        "metabolism": "Métabolisme surtout par conjugaison glucuronide et sulfate ; faible rôle des CYP. Élimination rénale des métabolites et interactions pharmacodynamiques avec dépresseurs.",
+        "release_profiles": [
+            releaseProfile(
+                "Libération immédiate (LI)",
+                "Oral",
+                "≈ 32 % (voie orale, premier passage important)",
+                { "onset": "15 - 30 min", "comeup": "30 - 45 min", "peak": "1 - 2 h", "offset": "2 - 3 h", "total": "4 - 6 h" },
+                { "threshold": "12,5 mg", "light": "25 - 50 mg", "common": "50 - 75 mg", "strong": "75 - 150 mg", "heavy": "150 mg +" },
+                "Repères LI issus de la fiche principale.",
+                ""
+            ),
+            releaseProfile(
+                "Libération prolongée (LP)",
+                "Oral",
+                "≈ 32 %, absorption étalée avec pic plus tardif.",
+                { "onset": "1 - 2 h", "comeup": "2 - 4 h", "peak": "3 - 6 h", "offset": "8 - 16 h", "total": "12 - 24 h selon formulation" },
+                prescriptionOnlyDosage(),
+                "Forme médicale à durée longue : attention aux mélanges dépresseurs et sérotoninergiques.",
+                LP_CRUSH_WARNING
+            )
+        ]
     },
     "o_dsmt": {
         "data_source": "PsychonautWiki API",

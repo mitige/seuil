@@ -1,7 +1,8 @@
 import importlib
-import json
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 
@@ -9,31 +10,67 @@ with mock.patch.object(sys, "argv", ["serve.py"]):
     serve = importlib.import_module("serve")
 
 
-class AiMaintenanceTests(unittest.TestCase):
-    def setUp(self):
-        self.client = serve.create_app().test_client()
+CSRF = {"X-Seuil-Csrf": "1"}
 
-    def test_status_endpoint_is_in_maintenance_and_does_not_leak_token(self):
+
+class AiOpenRouterTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db_path = Path(self.tmp.name) / "state.sqlite3"
+        self.app = serve.create_app(state_db_path=self.db_path)
+        self.client = self.app.test_client()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def register(self, username="op"):
+        from tests.test_auth_api import make_material
+
+        material = make_material()
+        payload = dict(material, username=username, displayName=username.title())
+        response = self.client.post("/api/auth/register", json=payload, headers=CSRF)
+        self.assertEqual(response.status_code, 201, response.get_json())
+        return material
+
+    @mock.patch.object(serve, "read_openrouter_api_key", return_value="test-secret")
+    def test_status_endpoint_reports_openrouter_without_leaking_token(self, _key):
         response = self.client.get("/api/ai/status")
 
-        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("Cache-Control"), "no-store")
         payload = response.get_json()
-        self.assertFalse(payload["bridge"])
-        self.assertTrue(payload["maintenance"])
+        self.assertTrue(payload["bridge"])
+        self.assertTrue(payload["configured"])
+        self.assertEqual(payload["provider"], "openrouter")
+        self.assertEqual(payload["model"], "nvidia/nemotron-3-ultra-550b-a55b:free")
         self.assertNotIn("token", payload)
+        self.assertNotIn("apiKey", payload)
 
-    def test_analyze_endpoint_refuses_requests(self):
+    def test_analyze_requires_csrf_then_authenticated_user(self):
         response = self.client.post(
             "/api/ai/analyze",
-            data=json.dumps({"provider": "codex", "prompt": "test"}),
-            content_type="application/json",
+            json={"prompt": "test"},
+        )
+        self.assertEqual(response.status_code, 403)
+
+        response = self.client.post("/api/ai/analyze", json={"prompt": "test"}, headers=CSRF)
+        self.assertEqual(response.status_code, 401)
+
+    @mock.patch.object(serve, "call_openrouter_chat", return_value="Réponse prudente.")
+    def test_analyze_uses_server_side_openrouter_for_logged_in_user(self, openrouter):
+        self.register()
+        response = self.client.post(
+            "/api/ai/analyze",
+            json={"prompt": "Que vérifier avant un mélange ?"},
+            headers=CSRF,
         )
 
-        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.status_code, 200, response.get_json())
         payload = response.get_json()
-        self.assertFalse(payload["ok"])
-        self.assertTrue(payload["maintenance"])
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["output"], "Réponse prudente.")
+        self.assertEqual(payload["model"], "nvidia/nemotron-3-ultra-550b-a55b:free")
+        openrouter.assert_called_once_with("Que vérifier avant un mélange ?")
 
 
 if __name__ == "__main__":

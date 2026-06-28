@@ -711,6 +711,69 @@ process.stdout.write(JSON.stringify({ total: Object.keys(db).length, routes: mod
     assert audit["problems"] == []
 
 
+def test_release_profiles_and_metabolism_are_visible_and_safety_bounded():
+    script = r"""
+const fs = require("fs");
+const vm = require("vm");
+const ctx = { window: {} };
+ctx.globalThis = ctx;
+vm.createContext(ctx);
+for (const file of ["db.js", "substances-data.js", "psychonaut-data.js", "index-substances.js"]) {
+  vm.runInContext(
+    fs.readFileSync(file, "utf8") + (file === "db.js" ? "\n;globalThis.SUBSTANCE_DB = SUBSTANCE_DB;" : ""),
+    ctx,
+    { filename: file }
+  );
+}
+const db = ctx.SUBSTANCE_DB;
+const problems = [];
+const releaseKeys = ["methylphenidate", "tramadol", "morphine", "hydromorphone", "oxycodone", "tapentadol"];
+const prescriptionOnly = "Prescription uniquement - ne pas convertir LI vers LP";
+for (const [key, sub] of Object.entries(db)) {
+  if (!sub.metabolism && sub.omit_quantitative_tables !== true) {
+    problems.push(`${key}: missing metabolism text or fallback`);
+  }
+}
+for (const key of releaseKeys) {
+  const sub = db[key];
+  if (!sub) {
+    problems.push(`${key}: missing substance`);
+    continue;
+  }
+  if (!Array.isArray(sub.release_profiles) || sub.release_profiles.length < 2) {
+    problems.push(`${key}: missing immediate/extended release profiles`);
+    continue;
+  }
+  const er = sub.release_profiles.find((profile) => /prolongée|prolongee/i.test(profile.name || ""));
+  if (!er) {
+    problems.push(`${key}: missing extended-release profile`);
+    continue;
+  }
+  if (!er.bioavailability || !er.timeline || !er.dosage || !er.warning) {
+    problems.push(`${key}: incomplete extended-release profile`);
+  }
+  if (!Object.values(er.dosage || {}).every((value) => String(value).includes("Prescription uniquement"))) {
+    problems.push(`${key}: extended-release dosage should stay prescription-only`);
+  }
+  if (!String(er.dosage.common || "").includes(prescriptionOnly)) {
+    problems.push(`${key}: extended-release common dosage should block LI to LP conversion`);
+  }
+  if (!String(er.warning || "").includes("Ne pas écraser, couper, mâcher, dissoudre ou injecter une forme LP.")) {
+    problems.push(`${key}: missing explicit crush/chew/dissolve/inject warning`);
+  }
+}
+process.stdout.write(JSON.stringify({ problems }));
+"""
+    result = subprocess.run(
+        ["node", "-e", script],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    assert json.loads(result.stdout)["problems"] == []
+
+
 def test_all_visible_substance_information_has_english_translation():
     script = r"""
 const fs = require("fs");

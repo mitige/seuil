@@ -69,33 +69,63 @@ The app is primarily in **French** with built-in **English** translations.
 
 ## Features
 
-**Journal & live session**
-- Record each session with precise date/time, substance, dose and route.
-- A **live safety companion**: dose-level curves, multi-substance overlays, and
-  *redose* windows that make timing decisions slower and more deliberate.
-- Targeted redosing per substance, with the curve recomputed as you log.
+**Journal, live tracking and history**
+- Record sessions with date/time, substance, route, dose, unit, set/setting and
+  contextual notes.
+- Use exact units (`mg`, `g`, `ug`, `ml`) or configurable qualitative units such
+  as line, joint, glass, tablet, drop, puff or dose when precision is unavailable.
+- Follow an active session with an estimated effect curve, draggable curve probe,
+  elapsed time, cumulative dose, live notes, and per-substance redosing.
+- Track more than one substance in the same session and keep a structured
+  timeline for later debriefing.
+- Search and review closed sessions, with editable/deletable dose entries.
 
 **Substance knowledge base**
-- An original directory of **120+ substance cards** (detailed and condensed),
-  with indicative thresholds, durations and harm-reduction notes.
-- An **interaction checker** that classifies combinations (synergy, risk,
-  reduction…) with plain-language warnings — never a green light.
+- Browse **120+ educational substance cards** with forms, routes, indicative
+  dosage ranges, route-specific timelines, estimated bioavailability, metabolism
+  notes where available, warning signs, aftercare and harm-reduction rules.
+- Route display is intentionally conservative: low-value or misleading routes are
+  hidden when a substance is realistically oral-only, inhaled-only or otherwise
+  route-limited.
+- Compare 2 to 5 theoretical effect curves side by side.
+- Check combinations in the interaction analyzer, which classifies documented
+  risks and explains unknown combinations as uncertain rather than safe.
+- Create personal substance cards for private notes, with clear warnings that
+  user-entered data is not externally verified.
 
 **Personal tools**
-- A secure **inventory / stash** view.
-- **Statistics** on your own logs, plus automatic safety rules.
-- Personalised cards and settings.
+- Maintain an encrypted inventory with quantity tracking and low-stock signals.
+- Read statistics on frequency, spacing, repeated use and risky proximity between
+  sessions.
+- Configure interface language, qualitative dose units, backups and account
+  controls from Settings.
+- Support the project through the Donations page without connecting donation data
+  to the encrypted Seuil vault.
+
+**Optional AI assistance**
+- A discreet AI assistant can answer harm-reduction questions through the server
+  endpoint backed by OpenRouter, when configured by the host.
+- Contextual AI buttons can review a planned session, active session, selected
+  curve comparison, selected combination, recent trends or last closed session.
+- The frontend never contains the OpenRouter API key; requests go through
+  `/api/ai/analyze` with CSRF protection, authentication and rate limiting.
+- AI output is treated as an educational aid only. It can be wrong and never
+  replaces medical care, emergency services or drug checking.
 
 **Privacy by design**
 - Per-account **encrypted vault**: data is encrypted in your browser *before*
   it ever leaves the device.
 - No analytics, no third-party fonts, no advertising cookies.
-- Full **offline** support and a self-hosted font stack.
+- Full **offline** support, installable PWA behavior, self-hosted fonts, CSP
+  headers and mobile-friendly navigation.
 
 **Administration** (server mode)
-- Admin panel: server health, account management (creation, roles, deactivation,
-  password reset, session revocation), a filterable **audit log**, active
-  sessions and a registration policy.
+- Admin panel for server health, storage usage, account creation, roles,
+  deactivation, password reset, session revocation and registration policy.
+- Active user status is based on recent page presence, not merely an old open
+  server session.
+- Filterable audit log for logins, failures, account changes, vault writes and
+  administrative actions.
 
 ---
 
@@ -159,6 +189,16 @@ python serve.py 12345        # http://127.0.0.1:12345
 `serve.py` is configured entirely via environment variables (port, rate limits,
 session lifetimes, public origins…) — no secrets are hardcoded.
 
+Useful server environment variables:
+
+| Variable | Default | Purpose |
+| --- | ---: | --- |
+| `SEUIL_MAX_STATE_DB_BYTES` | `5 GiB` | Total SQLite storage quota for server state and encrypted vaults. |
+| `SEUIL_MAX_STATE_VAULTS` | `200` | Maximum number of stored vault rows. |
+| `OPENROUTER_API_KEY` | unset | Enables the optional AI assistant when configured server-side. |
+| `SEUIL_AI_MAX_PROMPT_CHARS` | `3000` | Maximum prompt size accepted by `/api/ai/analyze`. |
+| `SEUIL_AI_MAX_OUTPUT_TOKENS` | `700` | Maximum AI response size requested from OpenRouter. |
+
 ---
 
 ## Self-hosting
@@ -208,7 +248,8 @@ index.html              App shell (tabs: journal, substances, inventory, stats, 
 app.js                  Core application logic
 auth.js                 Client-side zero-knowledge crypto + admin panel
 ui.js, boot.js          UI helpers and early-boot recovery
-ai.js, route-model.js   Optional local AI-assistant bridge
+ai.js                   Optional server-backed OpenRouter assistant UI
+route-model.js          Route, timeline and bioavailability modelling helpers
 db.js                   Substance & interaction content database
 substances-*.js         Substance directory data and detail views
 i18n.js, i18n-detail.js Translations (FR/EN)
@@ -259,8 +300,9 @@ overdose — **call emergency services immediately.**
 - ✅ Zero-knowledge server accounts and encrypted vault.
 - ✅ Substance directory, interaction checker, live session companion.
 - ✅ Offline PWA, public legal pages, security headers.
-- 🛠️ The optional **AI assistant** (local CLI bridge) is in maintenance and ships
-  disabled by default in public deployments.
+- ✅ Optional server-backed **AI assistant** for sober contextual reviews.
+- ✅ Partner-ready information, donation page, English/French interface and mobile
+  navigation polish.
 
 ---
 

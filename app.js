@@ -630,8 +630,90 @@ function applyI18nToAppSurfaces() {
     SeuilI18n.apply(document.getElementById("recovery-kit-modal"));
     SeuilI18n.apply(document.getElementById("pwgate-modal"));
     SeuilI18n.apply(document.getElementById("substance-modal"));
+    SeuilI18n.apply(document.getElementById("ai-context-panel"));
 }
 window.applySeuilI18n = applyI18nToAppSurfaces;
+
+function copySessionForAi(session) {
+    if (!session || typeof session !== "object") return null;
+    const copy = {
+        substanceKey: session.substanceKey || "",
+        substanceName: displaySubstanceName(session.substanceName || ""),
+        initialDose: session.initialDose,
+        cumulativeDose: session.cumulativeDose,
+        unit: session.unit || "",
+        route: session.route || "",
+        setSetting: session.setSetting || "",
+        startTime: session.startTime || null,
+        endTime: session.endTime || null,
+        extraSubstances: (session.extraSubstances || []).map((sub) => ({
+            key: sub.key || "",
+            name: displaySubstanceName(sub.name || ""),
+            cumulativeDose: sub.cumulativeDose,
+            unit: sub.unit || "",
+            route: sub.route || "",
+            logs: (sub.logs || []).slice(-12).map(copyLogForAi)
+        })),
+        logs: (session.logs || []).slice(-16).map(copyLogForAi)
+    };
+    return copy;
+}
+
+function copyLogForAi(log) {
+    return {
+        time: log && log.time ? log.time : null,
+        type: log && log.type ? log.type : "",
+        dose: log ? log.dose : null,
+        inputAmount: log ? log.inputAmount : null,
+        inputUnit: log && log.inputUnit ? log.inputUnit : "",
+        doseLabel: log && log.doseLabel ? log.doseLabel : "",
+        route: log && log.route ? log.route : "",
+        note: log && log.note ? log.note : ""
+    };
+}
+
+function getSeuilSubstanceSummary(key) {
+    const db = getMergedSubstanceDb();
+    const sub = key && db[key] ? db[key] : null;
+    if (!sub) return null;
+    const routes = getRoutesForSubstance(sub);
+    const routeSummaries = {};
+    routes.forEach((route) => {
+        const dosage = ROA_MODEL.getDosageForRoute ? ROA_MODEL.getDosageForRoute(sub, route) : sub.dosages;
+        const durations = getDurationsForRoute(sub, route);
+        const bioavailability = getBioavailabilityForRoute(sub, route);
+        routeSummaries[route] = {
+            dosage,
+            durations,
+            bioavailability: formatBioavailabilityValue(bioavailability)
+        };
+    });
+    return {
+        key,
+        name: displaySubstanceName(sub.name || key),
+        category: tx(sub.category || ""),
+        class: sub.class || "",
+        forms: sub.forms || [],
+        profile: tx(sub.profile || sub.description || ""),
+        risk_factors: sub.risk_factors || [],
+        avoid_if: sub.avoid_if || [],
+        warning_signs: sub.warning_signs || [],
+        rdr_rules: sub.rdr_rules || [],
+        metabolism: sub.metabolism || "",
+        routes,
+        routeSummaries
+    };
+}
+
+window.getSeuilAiSnapshot = function getSeuilAiSnapshot() {
+    return {
+        activeSession: copySessionForAi(appState.activeSession),
+        sessions: (appState.sessions || []).slice(0, 30).map(copySessionForAi),
+        compareSelection: typeof window.getCompareSelection === "function" ? window.getCompareSelection() : [],
+        language: window.SeuilI18n && typeof SeuilI18n.getLanguage === "function" ? SeuilI18n.getLanguage() : "fr"
+    };
+};
+window.getSeuilSubstanceSummary = getSeuilSubstanceSummary;
 
 function bindLanguageSettings() {
     const select = document.getElementById("language-select");
@@ -852,7 +934,7 @@ function registerServiceWorker() {
         window.location.reload();
     });
     window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js?v=2.3.104")
+        navigator.serviceWorker.register("./sw.js?v=2.3.110")
             .then((reg) => {
                 // Tenter d'attraper une mise à jour en cours
                 if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
@@ -2875,6 +2957,7 @@ function renderSubstanceMeta(sub) {
     if (sub.aliases && sub.aliases.length) rows.push({ label: "Alias", value: sub.aliases.slice(0, 8).map(item => tx(item)).join(", ") });
     if (sub.forms && sub.forms.length) rows.push({ label: "Formes observées", value: sub.forms.map(item => tx(item)).join(", ") });
     if (sub.legal_status) rows.push({ label: "Statut / cadre", value: sub.legal_status });
+    rows.push({ label: "Métabolisme", value: getSubstanceMetabolism(sub) });
 
     return rows.map(row => `
         <div class="substance-meta-item">
@@ -2882,6 +2965,12 @@ function renderSubstanceMeta(sub) {
             <strong>${escapeHtml(tx(row.value))}</strong>
         </div>
     `).join("");
+}
+
+function getSubstanceMetabolism(sub) {
+    return (sub && sub.metabolism)
+        ? sub.metabolism
+        : "Métabolisme spécifique non documenté dans cette fiche. Vérifier les sources médicales ou pharmaceutiques, surtout en cas de traitement, maladie hépatique ou maladie rénale.";
 }
 
 function renderSingleDosageRows(dosages, unitSuffix = "") {
@@ -2940,6 +3029,70 @@ function renderBioavailabilityRows(sub) {
                 <td class="dosage-level">${escapeHtml(tx(route))}${escapeHtml(estimated)}</td>
                 <td>${escapeHtml(value)}</td>
             </tr>
+        `;
+    }).join("");
+}
+
+function renderReleaseProfileDosageRows(dosage) {
+    if (!dosage) return "";
+    const fields = [
+        ["Seuil de dose", "threshold"],
+        ["Léger", "light"],
+        ["Commun", "common"],
+        ["Fort", "strong"],
+        ["Intense", "heavy"]
+    ];
+    return fields
+        .filter(([, key]) => dosage[key])
+        .map(([label, key]) => `<tr><td class="dosage-level">${escapeHtml(tx(label))}</td><td>${escapeHtml(tx(dosage[key]))}</td></tr>`)
+        .join("");
+}
+
+function renderReleaseProfileTimelineRows(timeline) {
+    if (!timeline) return "";
+    const fields = [
+        ["Début", "onset"],
+        ["Montée", "comeup"],
+        ["Plateau / pic", "peak"],
+        ["Descente", "offset"],
+        ["Durée totale", "total"]
+    ];
+    return fields
+        .filter(([, key]) => timeline[key])
+        .map(([label, key]) => `<tr><td class="dosage-level">${escapeHtml(tx(label))}</td><td>${escapeHtml(tx(timeline[key]))}</td></tr>`)
+        .join("");
+}
+
+function renderReleaseProfileCards(sub) {
+    const profiles = Array.isArray(sub && sub.release_profiles) ? sub.release_profiles : [];
+    if (!profiles.length) return "";
+    return profiles.map((profile) => {
+        const route = profile.route ? `<span>${escapeHtml(tx(profile.route))}</span>` : "";
+        const note = profile.note ? `<p class="microcopy">${escapeHtml(tx(profile.note))}</p>` : "";
+        const warning = profile.warning ? `<p class="release-profile-warning">${escapeHtml(tx(profile.warning))}</p>` : "";
+        return `
+            <article class="release-profile-card">
+                <div class="release-profile-head">
+                    <strong>${escapeHtml(tx(profile.name || ""))}</strong>
+                    ${route}
+                </div>
+                ${note}
+                <div class="release-profile-grid">
+                    <div class="release-profile-cell">
+                        <h4>${escapeHtml(tx("Bio-disponibilité"))}</h4>
+                        <p>${escapeHtml(tx(profile.bioavailability || "Non documentée dans la base"))}</p>
+                    </div>
+                    <div class="release-profile-cell">
+                        <h4>${escapeHtml(tx("Chronologie estimative"))}</h4>
+                        <table class="dosage-table"><tbody>${renderReleaseProfileTimelineRows(profile.timeline)}</tbody></table>
+                    </div>
+                    <div class="release-profile-cell">
+                        <h4>${escapeHtml(tx("Paliers indicatifs"))}</h4>
+                        <table class="dosage-table"><tbody>${renderReleaseProfileDosageRows(profile.dosage)}</tbody></table>
+                    </div>
+                </div>
+                ${warning}
+            </article>
         `;
     }).join("");
 }
@@ -3048,6 +3201,12 @@ async function openSubstanceModal(key) {
     if (bioavailabilityTable) {
         bioavailabilityTable.innerHTML = hideQuantitativeTables ? "" : renderBioavailabilityRows(sub);
     }
+
+    const releaseSection = document.getElementById("modal-sub-release-section");
+    const releaseProfilesEl = document.getElementById("modal-sub-release-profiles");
+    const releaseProfilesHtml = hideQuantitativeTables ? "" : renderReleaseProfileCards(sub);
+    if (releaseProfilesEl) releaseProfilesEl.innerHTML = releaseProfilesHtml;
+    if (releaseSection) releaseSection.style.display = releaseProfilesHtml ? "block" : "none";
 
     const expandedEl = document.getElementById("modal-sub-expanded-sections");
     expandedEl.innerHTML = [

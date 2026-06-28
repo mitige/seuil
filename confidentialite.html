@@ -9,8 +9,8 @@
     <meta name="google" content="notranslate">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; upgrade-insecure-requests">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="styles.css?v=24">
-    <script src="i18n.js?v=16"></script>
+    <link rel="stylesheet" href="styles.css?v=33">
+    <script src="i18n.js?v=52"></script>
 </head>
 <body>
 <a class="skip-link" href="#contenu-principal">Aller au contenu principal</a>
@@ -42,9 +42,9 @@
     </section>
 
     <section class="card">
-        <h2 class="card-title">Analyse IA (optionnelle, désactivée par défaut)</h2>
-        <p class="prose">Si vous activez l'assistant IA (Paramètres), une analyse n'est lancée que sur votre action explicite. Le prompt - substance, doses, horaires, courbe, contexte de session, et le cas échéant un résumé d'historique - est transmis à votre fournisseur IA <strong>via votre propre CLI local</strong> (Claude Code ou Codex). Ces données quittent alors l'appareil et sont soumises à la politique de ce fournisseur.</p>
-        <p class="prose">Le pont IA est temporairement en maintenance : il ne fournit plus de token, ne lance aucun CLI local et les contrôles IA sont désactivés dans l'interface.</p>
+        <h2 class="card-title">Analyse IA optionnelle</h2>
+        <p class="prose">Quand l'assistant IA est configuré côté serveur, une analyse n'est lancée que sur votre action explicite. Le prompt peut contenir la substance, les doses, horaires, voies, contexte de session, courbes visibles et, selon le bouton utilisé, un résumé d'historique récent.</p>
+        <p class="prose">La clé API OpenRouter reste côté serveur et n'est jamais envoyée au navigateur. Le contenu transmis à l'assistant quitte cependant le coffre déverrouillé pour être traité par le fournisseur IA ; n'utilisez pas cette fonction pour envoyer des données directement identifiantes.</p>
     </section>
 
     <section class="card">

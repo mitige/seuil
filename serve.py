@@ -25,6 +25,8 @@ import secrets
 import sqlite3
 import sys
 import time
+import urllib.error
+import urllib.request
 import uuid
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -37,13 +39,17 @@ ROOT = Path(__file__).resolve().parent
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("PORT") or (sys.argv[1] if len(sys.argv) > 1 else 12345))
 
-AI_MAINTENANCE = True
-AI_MAINTENANCE_MESSAGE = "Assistant IA en maintenance temporaire."
+OPENROUTER_API_URL = os.environ.get("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "nvidia/nemotron-3-ultra-550b-a55b:free")
+OPENROUTER_KEY_FILE = ROOT / "instance" / "openrouter_api_key"
+AI_MAX_PROMPT_CHARS = int(os.environ.get("SEUIL_AI_MAX_PROMPT_CHARS", "3000"))
+AI_MAX_OUTPUT_TOKENS = int(os.environ.get("SEUIL_AI_MAX_OUTPUT_TOKENS", "700"))
+AI_TIMEOUT_SECONDS = float(os.environ.get("SEUIL_AI_TIMEOUT_SECONDS", "25"))
 
 STATE_DB_PATH = ROOT / "instance" / "seuil_state.sqlite3"
 MAX_STATE_BLOB = 512 * 1024
 MAX_STATE_VAULTS = int(os.environ.get("SEUIL_MAX_STATE_VAULTS", "200"))
-MAX_STATE_DB_BYTES = int(os.environ.get("SEUIL_MAX_STATE_DB_BYTES", str(50 * 1024 * 1024)))
+MAX_STATE_DB_BYTES = int(os.environ.get("SEUIL_MAX_STATE_DB_BYTES", str(5 * 1024 * 1024 * 1024)))
 STATE_WRITE_RATE_LIMIT = int(os.environ.get("SEUIL_STATE_WRITE_RATE_LIMIT", "240"))
 STATE_RATE_WINDOW_SECONDS = int(os.environ.get("SEUIL_STATE_RATE_WINDOW_SECONDS", "3600"))
 
@@ -77,6 +83,7 @@ RATE_RULES = {
     "change-password": (20, 3600),
     "state-write": (STATE_WRITE_RATE_LIMIT, STATE_RATE_WINDOW_SECONDS),
     "admin-write": (120, 3600),
+    "ai": (30, 3600),
 }
 
 PUBLIC_FILES = {
@@ -284,6 +291,75 @@ def hash_session_token(token):
 
 def hash_vault_key(vault_key):
     return hashlib.sha256(vault_key.encode("utf-8")).hexdigest()
+
+
+AI_SYSTEM_PROMPT = (
+    "You are Seuil's sober harm-reduction assistant. "
+    "Answer in the user's language when clear. "
+    "Be concise, nonjudgmental, and practical. "
+    "Do not present psychoactive use as safe, do not optimize intoxication, and do not provide instructions for injection, hiding use, synthesis, trafficking, or evading care. "
+    "For medical risk, dangerous combinations, overdose signs, pregnancy, chronic illness, or prescribed treatments, recommend contacting a qualified professional. "
+    "For emergencies, tell the user to call local emergency services immediately. "
+    "Never claim certainty from limited context; ask for professional help when risk is unclear."
+)
+
+
+def read_openrouter_api_key():
+    key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if key:
+        return key
+    try:
+        return OPENROUTER_KEY_FILE.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def call_openrouter_chat(prompt):
+    key = read_openrouter_api_key()
+    if not key:
+        raise RuntimeError("Assistant IA non configuré.")
+
+    payload = {
+        "model": OPENROUTER_MODEL,
+        "messages": [
+            {"role": "system", "content": AI_SYSTEM_PROMPT},
+            {"role": "user", "content": str(prompt or "")[:AI_MAX_PROMPT_CHARS]},
+        ],
+        "temperature": 0.2,
+        "max_tokens": AI_MAX_OUTPUT_TOKENS,
+    }
+    req = urllib.request.Request(
+        OPENROUTER_API_URL,
+        data=json.dumps(payload).encode("utf-8"),
+        method="POST",
+        headers={
+            "Authorization": "Bearer {}".format(key),
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://seuil.pro",
+            "X-Title": "Seuil",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=AI_TIMEOUT_SECONDS) as response:
+            raw = response.read(1024 * 1024)
+    except urllib.error.HTTPError as exc:
+        try:
+            exc.read(1024)
+        except OSError:
+            pass
+        raise RuntimeError("Assistant IA momentanément indisponible.") from exc
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise RuntimeError("Assistant IA momentanément indisponible.") from exc
+
+    try:
+        data = json.loads(raw.decode("utf-8"))
+        output = data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("Réponse IA invalide.") from exc
+    output = str(output or "").strip()
+    if not output:
+        raise RuntimeError("Réponse IA vide.")
+    return output
 
 
 # ============================================================
@@ -717,25 +793,36 @@ def create_app(state_db_path=None):
         return redirect("/", code=308)
 
     # --------------------------------------------------------
-    # Pont IA (maintenance)
+    # Assistant IA sobre via OpenRouter (côté serveur)
     # --------------------------------------------------------
 
     @app.get("/api/ai/status")
     def ai_status():
-        response = jsonify({
-            "bridge": False,
-            "clis": {"claude": False, "codex": False},
-            "maintenance": True,
-            "message": AI_MAINTENANCE_MESSAGE,
+        configured = bool(read_openrouter_api_key())
+        return json_ok({
+            "bridge": configured,
+            "configured": configured,
+            "provider": "openrouter",
+            "model": OPENROUTER_MODEL,
         })
-        response.status_code = 503
-        return response
 
     @app.post("/api/ai/analyze")
     def ai_analyze():
-        response = jsonify({"ok": False, "maintenance": True, "error": AI_MAINTENANCE_MESSAGE})
-        response.status_code = 503
-        return response
+        require_csrf()
+        require_user()
+        if rate_limited("ai"):
+            return json_error("Trop de requêtes IA. Réessayez plus tard.", 429)
+        data = request.get_json(silent=True) or {}
+        prompt = str(data.get("prompt") or "").strip()
+        if len(prompt) < 4:
+            return json_error("Question trop courte.", 400)
+        if len(prompt) > AI_MAX_PROMPT_CHARS:
+            return json_error("Question trop longue.", 400)
+        try:
+            output = call_openrouter_chat(prompt)
+        except RuntimeError as exc:
+            return json_error(str(exc), 503)
+        return json_ok({"output": output, "model": OPENROUTER_MODEL})
 
     # --------------------------------------------------------
     # Authentification

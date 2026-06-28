@@ -1,5 +1,4 @@
 import importlib
-import json
 import sys
 import unittest
 from unittest import mock
@@ -35,21 +34,20 @@ class PublicFlaskServerTests(unittest.TestCase):
         self.assertEqual(self.client.get("/fonts/space-grotesk-latin.woff2", buffered=True).status_code, 200)
         self.assertEqual(self.client.get("/psychonaut-data.js", buffered=True).status_code, 200)
 
-    def test_ai_endpoints_stay_in_maintenance(self):
+    def test_ai_endpoints_do_not_leak_secret_and_analyze_requires_csrf(self):
         status_response = self.client.get("/api/ai/status")
-        self.assertEqual(status_response.status_code, 503)
+        self.assertEqual(status_response.status_code, 200)
         payload = status_response.get_json()
-        self.assertFalse(payload["bridge"])
-        self.assertTrue(payload["maintenance"])
+        self.assertEqual(payload["provider"], "openrouter")
+        self.assertIn("configured", payload)
         self.assertNotIn("token", payload)
+        self.assertNotIn("apiKey", payload)
 
         analyze_response = self.client.post(
             "/api/ai/analyze",
-            data=json.dumps({"provider": "codex", "prompt": "test"}),
-            content_type="application/json",
+            json={"prompt": "test"},
         )
-        self.assertEqual(analyze_response.status_code, 503)
-        self.assertTrue(analyze_response.get_json()["maintenance"])
+        self.assertEqual(analyze_response.status_code, 403)
 
 
 if __name__ == "__main__":

@@ -73,35 +73,68 @@ intégrées.
 
 ## Fonctionnalités
 
-**Journal & session en direct**
-- Consignez chaque session avec date/heure précises, substance, dose et voie.
-- Un **compagnon de sécurité en direct** : courbes de palier de dose, superposition
-  multi-substances et fenêtres de *redose* qui rendent les décisions de timing plus
-  lentes et plus réfléchies.
-- Redose ciblé par substance, avec recalcul de la courbe au fil de la saisie.
+**Journal, suivi en direct et historique**
+- Consignez chaque session avec date/heure, substance, voie, dose, unité,
+  état mental/environnement et notes de contexte.
+- Utilisez des unités exactes (`mg`, `g`, `ug`, `ml`) ou des unités qualitatives
+  configurables comme ligne, joint, verre, comprimé, goutte, bouffée ou prise
+  quand la précision n'est pas disponible.
+- Suivez une session active avec une courbe d'effet estimative, un point de lecture
+  déplaçable, le temps écoulé, la dose cumulée, les notes en direct et le redose
+  par substance.
+- Suivez plusieurs substances dans la même session et conservez une chronologie
+  structurée pour le débrief.
+- Recherchez les sessions clôturées et modifiez ou supprimez les entrées de dose.
 
 **Base de connaissances des substances**
-- Un répertoire original de **120+ fiches** (détaillées et condensées) avec paliers
-  indicatifs, durées et repères de réduction des risques.
-- Un **vérificateur d'interactions** qui classe les associations (synergie, risque,
-  diminution…) avec des avertissements en langage clair — jamais un feu vert.
+- Parcourez **120+ fiches pédagogiques** avec formes, voies, paliers indicatifs,
+  timelines par voie, bioavailability estimée, métabolisme quand disponible,
+  signaux d'alerte, récupération et règles de réduction des risques.
+- L'affichage des voies est volontairement conservateur : les voies peu utiles ou
+  trompeuses sont masquées quand une substance est oral-only, inhaled-only ou
+  limitée à certaines voies.
+- Comparez 2 à 5 courbes d'effet théoriques.
+- Vérifiez les associations dans l'analyseur de mélanges, qui classe les risques
+  documentés et traite les combinaisons inconnues comme incertaines, jamais comme
+  sûres.
+- Créez des fiches personnelles privées, avec rappel clair que les données saisies
+  par l'utilisateur ne sont pas vérifiées par une source externe.
 
 **Outils personnels**
-- Une vue **inventaire / réserve** sécurisée.
-- Des **statistiques** sur vos propres saisies, plus des règles de sécurité
-  automatiques.
-- Fiches et paramètres personnalisables.
+- Gérez un inventaire chiffré avec suivi de quantité et signaux de stock bas.
+- Lisez des statistiques sur la fréquence, l'espacement, la répétition d'usage et
+  les proximités risquées entre sessions.
+- Configurez la langue, les unités qualitatives, les sauvegardes et le compte dans
+  Paramètres.
+- Soutenez le projet via la page Donations sans relier les données de don au coffre
+  chiffré Seuil.
+
+**Assistance IA optionnelle**
+- Un assistant IA discret peut répondre à des questions de réduction des risques
+  via l'endpoint serveur OpenRouter, si l'hébergeur le configure.
+- Des boutons IA contextuels peuvent relire une session prévue, une session active,
+  une comparaison de courbes, un mélange sélectionné, les tendances récentes ou la
+  dernière session clôturée.
+- La clé API OpenRouter n'est jamais présente dans le frontend ; les requêtes
+  passent par `/api/ai/analyze` avec authentification, CSRF et rate limiting.
+- La réponse IA reste une aide pédagogique : elle peut se tromper et ne remplace
+  jamais un avis médical, une urgence ou une analyse de produit.
 
 **Confidentialité dès la conception**
 - **Coffre chiffré** par compte : les données sont chiffrées dans votre navigateur
   *avant* de quitter l'appareil.
 - Aucun analytics, aucune police tierce, aucun cookie publicitaire.
-- Support **hors-ligne** complet et polices auto-hébergées.
+- Support **hors-ligne** complet, PWA installable, polices auto-hébergées,
+  en-têtes CSP et navigation mobile adaptée.
 
 **Administration** (mode serveur)
-- Panneau d'administration : santé du serveur, gestion des comptes (création,
-  rôles, désactivation, réinitialisation de mot de passe, révocation de sessions),
-  **journal d'audit** filtrable, sessions actives et politique d'inscription.
+- Panneau d'administration pour santé serveur, usage stockage, création de comptes,
+  rôles, désactivation, réinitialisation de mot de passe, révocation de sessions
+  et politique d'inscription.
+- L'état utilisateur actif repose sur une présence récente sur la page, pas sur une
+  ancienne session serveur ouverte.
+- Journal d'audit filtrable pour connexions, échecs, comptes, écritures de coffre
+  et actions administrateur.
 
 ---
 
@@ -168,6 +201,16 @@ python serve.py 12345        # http://127.0.0.1:12345
 `serve.py` se configure entièrement par variables d'environnement (port, limites de
 débit, durées de session, origines publiques…) — aucun secret n'est codé en dur.
 
+Variables serveur utiles :
+
+| Variable | Défaut | Rôle |
+| --- | ---: | --- |
+| `SEUIL_MAX_STATE_DB_BYTES` | `5 Gio` | Quota total du stockage SQLite pour l'état serveur et les coffres chiffrés. |
+| `SEUIL_MAX_STATE_VAULTS` | `200` | Nombre maximal de coffres stockés. |
+| `OPENROUTER_API_KEY` | non défini | Active l'assistant IA optionnel côté serveur. |
+| `SEUIL_AI_MAX_PROMPT_CHARS` | `3000` | Taille maximale du prompt accepté par `/api/ai/analyze`. |
+| `SEUIL_AI_MAX_OUTPUT_TOKENS` | `700` | Taille maximale de réponse demandée à OpenRouter. |
+
 ---
 
 ## Auto-hébergement
@@ -218,7 +261,8 @@ index.html              Coquille de l'app (onglets : journal, substances, invent
 app.js                  Logique applicative principale
 auth.js                 Crypto zéro-connaissance côté client + panneau d'administration
 ui.js, boot.js          Helpers UI et récupération au démarrage
-ai.js, route-model.js   Pont optionnel vers un assistant IA local
+ai.js                   Interface de l'assistant OpenRouter côté serveur
+route-model.js          Modélisation des voies, durées et biodisponibilités
 db.js                   Base de contenu des substances et interactions
 substances-*.js         Données du répertoire de substances et vues détaillées
 i18n.js, i18n-detail.js Traductions (FR/EN)
@@ -270,8 +314,9 @@ sévère ou suspicion de surdose — **appelez immédiatement les secours.**
 - ✅ Comptes serveur zéro-connaissance et coffre chiffré.
 - ✅ Répertoire de substances, vérificateur d'interactions, compagnon de session.
 - ✅ PWA hors-ligne, pages légales publiques, en-têtes de sécurité.
-- 🛠️ L'**assistant IA** optionnel (pont CLI local) est en maintenance et livré
-  désactivé par défaut dans les déploiements publics.
+- ✅ **Assistant IA** optionnel côté serveur pour des lectures contextuelles sobres.
+- ✅ Interface français/anglais, page donations, information partenariale et
+  navigation mobile améliorée.
 
 ---
 

@@ -245,6 +245,7 @@
         dosage_warning: "Fiche de référence sans posologie : Seuil n'intègre volontairement aucun palier de dose, voie ni rythme pour cette entrée. Ne pas s'en servir pour choisir une quantité.",
         forms: ["Forme et pureté réelles à vérifier avant toute interprétation."],
         legal_status: "Statut juridique variable selon la molécule, le pays et l'évolution des classements. Cette fiche n'est pas un avis juridique.",
+        metabolism: "Métabolisme spécifique non documenté dans cette fiche. Vérifier les sources médicales ou pharmaceutiques, surtout en cas de traitement, maladie hépatique ou maladie rénale.",
         dosages: { unit: "non renseigné", threshold: "Non documenté", light: "Non documenté", common: "Non documenté", strong: "Non documenté", heavy: "Non documenté" },
         durations: { onset: "Non documenté", comeup: "Non documenté", peak: "Non documenté", offset: "Non documenté", total: "Non documenté" }
     };
@@ -499,6 +500,7 @@
             aliases: aliases.slice(0, 8),
             forms: (rich && rich.forms) || SHARED.forms.slice(),
             legal_status: (rich && rich.legal_status) || SHARED.legal_status,
+            metabolism: (rich && rich.metabolism) || SHARED.metabolism,
             effects: (rich && rich.effects) || fam.effects,
             risk_factors: (rich && rich.risk_factors) || fam.risk_factors,
             avoid_if: (rich && rich.avoid_if) || fam.avoid_if,
@@ -528,6 +530,9 @@
 
     Object.keys(SUBSTANCE_DB).forEach(function (id) {
         if (SUBSTANCE_DB[id] && !SUBSTANCE_DB[id].id) SUBSTANCE_DB[id].id = id;
+        if (SUBSTANCE_DB[id] && !SUBSTANCE_DB[id].metabolism && !SUBSTANCE_DB[id].omit_quantitative_tables) {
+            SUBSTANCE_DB[id].metabolism = SHARED.metabolism;
+        }
     });
 
     delete SUBSTANCE_DB.ibogaine;

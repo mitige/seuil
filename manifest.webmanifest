@@ -1,7 +1,7 @@
 {
   "name": "Seuil - journal de réduction des risques",
   "short_name": "Seuil",
-  "description": "Journal privé et chiffré de réduction des risques : sessions, fiches substances, interactions, inventaire et statistiques.",
+  "description": "PWA privée de réduction des risques : journal chiffré, fiches substances, interactions, courbes, inventaire, statistiques et IA optionnelle.",
   "lang": "fr",
   "start_url": "./index.html",
   "scope": "./",

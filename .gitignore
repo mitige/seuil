@@ -31,6 +31,7 @@ oc-yolo.sh
 refonte-*.png
 merge-*.png
 cleanup-*.png
+test-results/
 Archive.zip
 
 # ── Internal working notes (not for publication) ──────────

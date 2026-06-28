@@ -153,13 +153,14 @@ def test_i18n_auto_detects_browser_language_and_core_english_strings():
 def test_social_link_preview_metadata_is_english_for_crawlers():
     index_html = read("index.html")
     head = index_html[:index_html.index("</head>")]
+    description = "Private harm-reduction PWA for encrypted session tracking, substance cards, combination checks, effect curves, inventory, statistics, and optional AI review."
 
-    assert '<meta name="description" content="Private app for recording sessions, reading harm-reduction cards, checking risky combinations, and protecting your data.">' in head
+    assert f'<meta name="description" content="{description}">' in head
     assert '<meta property="og:title" content="Seuil">' in head
-    assert '<meta property="og:description" content="Private educational app for recording sessions, reading harm-reduction cards, and better understanding risky combinations.">' in head
+    assert f'<meta property="og:description" content="{description}">' in head
     assert '<meta property="og:locale" content="en_US">' in head
     assert '<meta name="twitter:title" content="Seuil">' in head
-    assert '<meta name="twitter:description" content="Private educational app for recording sessions, reading harm-reduction cards, and better understanding risky combinations.">' in head
+    assert f'<meta name="twitter:description" content="{description}">' in head
 
     for french_phrase in [
         "Seuil - suivi personnel et formations de réduction des risques",
@@ -248,33 +249,119 @@ def test_i18n_covers_main_app_static_interface_strings():
         assert '"' + phrase + '":' in i18n_js
 
 
-def test_ai_features_are_not_rendered_in_public_interface():
+def test_sober_contextual_ai_controls_are_rendered_without_legacy_bridge_ui():
     index_html = read("index.html")
     sw_js = read("sw.js")
+    ai_js = read("ai.js")
+    app_js = read("app.js")
+    serve_py = read("serve.py")
 
-    hidden_fragments = [
+    visible_fragments = [
         'id="btn-ai-presession"',
         'id="btn-ai-session"',
         'id="btn-ai-comparison"',
         'id="btn-ai-interaction"',
         'id="btn-ai-trends"',
         'id="btn-ai-debrief"',
+        'id="ai-context-panel"',
+        'id="ai-context-result"',
+        'class="ai-context-actions',
+        "Avant de démarrer",
+        "Analyser la session",
+        "Lire les courbes",
+        "Lire le mélange",
+        "Lire les tendances",
+        "Débrief dernière session",
+    ]
+    for fragment in visible_fragments:
+        assert fragment in index_html
+
+    hidden_fragments = [
         'id="btn-ai-assistant"',
         'id="ai-enable"',
         'id="ai-settings-detail"',
         'id="ai-modal"',
-        'src="ai.js',
         "Contrôle de risque IA",
         "Analyser cette session avec l'IA",
         "Commenter cette comparaison avec l'IA",
         "Décrypter ce mélange avec l'IA",
         "Analyse IA",
-        "Assistant IA",
         "Voir / copier le prompt envoyé",
     ]
     for fragment in hidden_fragments:
         assert fragment not in index_html
-    assert "ai.js" not in sw_js
+    assert 'id="ai-assistant-card"' in index_html
+    assert 'src="ai.js?v=8"' in index_html
+    assert "./ai.js?v=8" in sw_js
+    assert 'src="app.js?v=104"' in index_html
+    assert "./app.js?v=104" in sw_js
+    assert "/api/ai/analyze" in ai_js
+    assert "X-Seuil-Csrf" in ai_js
+    assert "function callAi(prompt)" in ai_js
+    assert "function promptSessionAnalysis()" in ai_js
+    assert "function promptPreSession()" in ai_js
+    assert "function promptComparison()" in ai_js
+    assert "function promptInteraction()" in ai_js
+    assert "function promptTrends()" in ai_js
+    assert "function promptDebrief()" in ai_js
+    assert "window.getSeuilAiSnapshot" in app_js
+    assert "OPENROUTER_API_KEY" in serve_py
+    assert "nvidia/nemotron-3-ultra-550b-a55b:free" in serve_py
+    assert "sk-or-v1" not in index_html + sw_js + ai_js + serve_py
+
+
+def test_mobile_navigation_keeps_all_primary_icons_visible():
+    index_html = read("index.html")
+    styles_css = read("styles.css")
+
+    for label in ["Journal", "Inventaire", "Substances", "Statistiques", "Infos", "Donations", "Paramètres"]:
+        assert f'<span class="nav-label">{label}</span>' in index_html
+
+    assert "--mobile-nav-height: 84px;" in styles_css
+    assert "grid-template-columns: repeat(7, minmax(0, 1fr));" in styles_css
+    assert "body.is-admin .nav-links { grid-template-columns: repeat(8, minmax(54px, 1fr)); }" in styles_css
+    assert ".nav-links::-webkit-scrollbar { display: none; }" in styles_css
+    assert ".nav-item button svg { width: 20px; height: 20px; flex-shrink: 0; }" in styles_css
+    assert ".nav-label" in styles_css
+    assert "padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));" in styles_css
+
+
+def test_donations_page_uses_app_navigation_and_i18n():
+    index_html = read("index.html")
+    i18n_js = read("i18n.js")
+    styles_css = read("styles.css")
+
+    assert 'data-tab="tab-donations"' in index_html
+    assert 'id="tab-donations"' in index_html
+    assert "Donations" in index_html
+    assert "Soutenir Seuil" in index_html
+    assert "paypal.me" not in index_html.lower()
+    assert "eusdeu21@gmail.com" in index_html
+    assert 'href="mailto:eusdeu21@gmail.com"' in index_html
+    assert "PayPal Friends and Family" in index_html
+    assert 'class="paypal-name-box"' in index_html
+    assert "Elise Dune" in index_html
+    assert "Un soutien volontaire aide à maintenir l’hébergement, les audits, les sources et les mises à jour éditoriales." in index_html
+
+    for phrase in [
+        "Donations",
+        "Soutenir Seuil",
+        "Un soutien volontaire aide à maintenir l’hébergement, les audits, les sources et les mises à jour éditoriales.",
+        "PayPal Friends and Family",
+        "Adresse PayPal",
+        "Nom affiché sur PayPal",
+        "Elise Dune",
+        "Ouvrir un email",
+        "Aucune donnée de santé, de session ou de compte n’est demandée pour donner.",
+    ]:
+        assert json.dumps(phrase, ensure_ascii=False) + ":" in i18n_js
+
+    assert (
+        "#tab-donations .quality-intro-card > .prose + .info-list {\n"
+        "    margin-top: 20px;\n"
+        "}"
+    ) in styles_css
+    assert ".paypal-name-box" in styles_css
 
 
 def test_i18n_covers_public_static_pages():
@@ -1495,6 +1582,13 @@ def test_service_worker_registration_version_matches_cache_release():
     assert registration_match.group(1) == cache_match.group(1)
 
 
+def test_server_storage_quota_defaults_to_five_gib():
+    serve_py = read("serve.py")
+
+    assert 'SEUIL_MAX_STATE_DB_BYTES", str(5 * 1024 * 1024 * 1024)' in serve_py
+    assert '"maxDbBytes": app.config["MAX_STATE_DB_BYTES"]' in serve_py
+
+
 def test_auth_api_fetch_has_timeout():
     auth_js = read("auth.js")
 
@@ -2173,7 +2267,17 @@ def test_i18n_covers_recent_english_polish_strings():
 
     for phrase in [
         '"Vos sessions, vos repères, vos données - sous votre seul contrôle.": "Your sessions, your reference points, your data - under your sole control."',
-        '"Assistant IA en maintenance temporaire.": "AI assistant temporarily under maintenance."',
+        '"Assistant IA": "AI assistant"',
+        '"Décrire une situation, un mélange ou un doute sans données directement identifiantes.": "Describe a situation, a combination, or a concern without directly identifying data."',
+        '"Demander à l’assistant": "Ask the assistant"',
+        '"Avant de démarrer": "Before starting"',
+        '"Analyser la session": "Analyze session"',
+        '"Lire les courbes": "Read curves"',
+        '"Lire le mélange": "Read combination"',
+        '"Lire les tendances": "Read trends"',
+        '"Débrief dernière session": "Debrief last session"',
+        '"Résultat IA": "AI result"',
+        '"Pas encore assez de sessions clôturées à analyser.": "Not enough closed sessions to analyze yet."',
         '"Alcool": "Alcohol"',
         '"Champignons (psilocybine)": "Mushrooms (psilocybin)"',
         '"Protoxyde d’azote": "Nitrous oxide"',
@@ -2182,4 +2286,4 @@ def test_i18n_covers_recent_english_polish_strings():
         assert phrase in i18n_js
     assert "window.applySeuilI18n = applyI18nToAppSurfaces;" in app_js
     assert "window.applySeuilI18n();" in auth_js
-    assert "aiText(AI_MAINTENANCE_MESSAGE)" in ai_js
+    assert "function aiText(key, vars)" in ai_js
