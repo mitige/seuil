@@ -1,0 +1,10 @@
+# Journal RDR - en-tetes de securite pour hebergement Apache.
+# À activer uniquement si le module headers est disponible.
+<IfModule mod_headers.c>
+  Header set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; manifest-src 'self'; upgrade-insecure-requests"
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "no-referrer"
+  Header set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=()"
+  Header set Cross-Origin-Opener-Policy "same-origin"
+  Header set X-Frame-Options "DENY"
+</IfModule>

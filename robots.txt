@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Journal RDR ne stocke aucune donnée utilisateur côté serveur.
+# Éviter de publier des exports JSON personnels dans le répertoire web.

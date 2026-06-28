@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confidentialité - Seuil</title>
+    <meta name="description" content="Politique de confidentialité de Seuil.">
+    <meta name="referrer" content="no-referrer">
+    <meta name="google" content="notranslate">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; upgrade-insecure-requests">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="styles.css?v=24">
+    <script src="i18n.js?v=16"></script>
+</head>
+<body>
+<a class="skip-link" href="#contenu-principal">Aller au contenu principal</a>
+<main id="contenu-principal" class="static-page" tabindex="-1">
+    <header class="page-header">
+        <a href="index.html" class="section-kicker">← Retour à l'application</a>
+        <h1 class="page-title">Politique de confidentialité</h1>
+        <p class="page-subtitle">Seuil fonctionne sans compte utilisateur. Les données personnelles sont stockées sur ce serveur sous forme de coffre chiffré côté navigateur.</p>
+    </header>
+
+    <section class="card">
+        <h2 class="card-title">Données traitées</h2>
+        <ul>
+            <li>Sessions consignées, substances, quantités, heures, voies d'administration et notes personnelles.</li>
+            <li>Inventaire, fiches personnalisées et paramètres de sécurité.</li>
+            <li>Sauvegardes JSON exportées volontairement par l'utilisateur.</li>
+        </ul>
+    </section>
+
+    <section class="card">
+        <h2 class="card-title">Stockage et transmission</h2>
+        <p class="prose">Les données sont chiffrées dans le navigateur avec WebCrypto, puis enregistrées sur le serveur sous forme de blob illisible sans la clé conservée dans ce navigateur. Le serveur ne reçoit pas les sessions ou l'inventaire en clair.</p>
+        <p class="fine-print">Le navigateur conserve uniquement l'identifiant du coffre et la clé locale de déchiffrement. Si cette clé est effacée, les données du coffre ne peuvent pas être récupérées sans sauvegarde JSON exportée.</p>
+    </section>
+
+    <section class="card">
+        <h2 class="card-title">Chiffrement</h2>
+        <p class="prose">Le coffre serveur est chiffré côté navigateur avant chaque sauvegarde. Cette protection dépend aussi de la sécurité de l'appareil et du navigateur. Les exports JSON peuvent rester lisibles s'ils sont conservés sans protection.</p>
+    </section>
+
+    <section class="card">
+        <h2 class="card-title">Analyse IA (optionnelle, désactivée par défaut)</h2>
+        <p class="prose">Si vous activez l'assistant IA (Paramètres), une analyse n'est lancée que sur votre action explicite. Le prompt - substance, doses, horaires, courbe, contexte de session, et le cas échéant un résumé d'historique - est transmis à votre fournisseur IA <strong>via votre propre CLI local</strong> (Claude Code ou Codex). Ces données quittent alors l'appareil et sont soumises à la politique de ce fournisseur.</p>
+        <p class="prose">Le pont IA est temporairement en maintenance : il ne fournit plus de token, ne lance aucun CLI local et les contrôles IA sont désactivés dans l'interface.</p>
+    </section>
+
+    <section class="card">
+        <h2 class="card-title">Droits et contact</h2>
+        <p class="prose">L'utilisateur peut exporter une sauvegarde JSON ou effacer son coffre serveur depuis les paramètres de l'application. Sans la clé locale du navigateur, l'éditeur ne peut pas lire le contenu chiffré du coffre.</p>
+        <p class="prose">Contact données personnelles : <a href="mailto:eeev442@gmail.com">eeev442@gmail.com</a>.</p>
+    </section>
+
+    <footer class="static-footer">Seuil - Dernière revue : 24 mai 2026.</footer>
+</main>
+</body>
+</html>

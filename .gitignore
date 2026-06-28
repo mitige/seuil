@@ -1,0 +1,47 @@
+# ── User data — NEVER commit ──────────────────────────────
+instance/
+*.sqlite3
+*.sqlite
+*.db
+*-export*.json
+
+# ── Python ────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# ── Node ──────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+
+# ── Dev tooling & local agents ────────────────────────────
+.agents/
+.codex/
+.superpowers/
+.playwright-mcp/
+.refonte-backup/
+docs/superpowers/
+oc-yolo.sh
+
+# ── Dev artifacts ─────────────────────────────────────────
+refonte-*.png
+merge-*.png
+cleanup-*.png
+Archive.zip
+
+# ── Internal working notes (not for publication) ──────────
+AUDIT_PUBLICATION.md
+PUBLICATION_CHECKLIST.md
+MENTIONS_LEGALES_A_COMPLETER.md
+
+# ── OS / editor ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/

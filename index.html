@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="fr" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <title>Seuil</title>
+    <meta name="description" content="Private app for recording sessions, reading harm-reduction cards, checking risky combinations, and protecting your data.">
+    <meta name="application-name" content="Seuil">
+    <meta name="theme-color" content="#07080B">
+    <meta name="color-scheme" content="dark">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Seuil">
+    <meta name="referrer" content="no-referrer">
+    <meta name="google" content="notranslate">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'; upgrade-insecure-requests">
+    <meta property="og:title" content="Seuil">
+    <meta property="og:description" content="Private educational app for recording sessions, reading harm-reduction cards, and better understanding risky combinations.">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="en_US">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Seuil">
+    <meta name="twitter:description" content="Private educational app for recording sessions, reading harm-reduction cards, and better understanding risky combinations.">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="apple-touch-icon" href="icon-180.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="styles.css?v=29">
+</head>
+<body class="auth-locked auth-booting">
+    <div id="boot-screen" role="status" aria-live="polite">
+        <div class="boot-panel">
+            <div class="boot-brand notranslate" translate="no">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8.6" r="4.1"></circle><line x1="3.2" y1="15.4" x2="20.8" y2="15.4"></line><line x1="7.4" y1="19.6" x2="16.6" y2="19.6" opacity="0.4"></line></svg>
+                <span>Seuil</span>
+            </div>
+            <div class="boot-loader" aria-hidden="true"></div>
+            <p data-i18n="Chargement sécurisé...">Chargement sécurisé...</p>
+        </div>
+    </div>
+    <script src="i18n.js?v=49"></script>
+    <!-- BOOT EARLY RECOVERY : tourne avant tout autre script (fichier externe - CSP script-src 'self'). -->
+    <script src="boot.js?v=7"></script>
+    <a class="skip-link" href="#contenu-principal">Aller au contenu principal</a>
+
+    <!-- ÉCRAN DE VERROUILLAGE (legacy - conservé pour migration depuis l'ancien stockage local) -->
+    <div id="lock-screen" class="hidden">
+        <div class="lock-container">
+            <div class="lock-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <span>Seuil</span>
+            </div>
+            <p style="color: var(--color-text-muted); margin-bottom: 20px; font-size: 14px;">Entrez le mot de passe défini pour déchiffrer vos données locales. Rien n’est envoyé en ligne.</p>
+            <div class="form-group">
+                <input type="password" id="lock-password" class="form-control" placeholder="Mot de passe..." style="text-align: center;">
+            </div>
+            <button id="btn-unlock" class="btn btn-primary btn-block">Déverrouiller</button>
+            <p id="lock-error" style="color: #ef4444; font-size: 12px; margin-top: 10px; display: none;">Mot de passe incorrect ou erreur de déchiffrement.</p>
+        </div>
+    </div>
+
+    <!-- ÉCRAN D'AUTHENTIFICATION (multi-utilisateurs) -->
+    <div id="auth-screen" aria-labelledby="auth-title">
+        <div class="auth-aurora" aria-hidden="true"></div>
+        <div class="auth-shell">
+            <aside class="auth-side" aria-hidden="true">
+                <div class="auth-brand">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8.6" r="4.1"></circle><line x1="3.2" y1="15.4" x2="20.8" y2="15.4"></line><line x1="7.4" y1="19.6" x2="16.6" y2="19.6" opacity="0.4"></line></svg>
+                    <span>Seuil</span>
+                </div>
+                <div class="auth-side-eyebrow">Réduction des risques</div>
+                <h2 class="auth-side-title">Un journal sobre,<br>chiffré, à votre rythme.</h2>
+                <p class="auth-side-lede">Vos sessions, vos repères, vos données - sous votre seul contrôle.</p>
+                <ul class="auth-side-points">
+                    <li>
+                        <span class="auth-side-bullet" aria-hidden="true">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"></path></svg>
+                        </span>
+                        <span><strong>Chiffrement de bout en bout</strong><br>Vos données quittent votre navigateur déjà chiffrées (AES-GCM).</span>
+                    </li>
+                    <li>
+                        <span class="auth-side-bullet" aria-hidden="true">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"></path></svg>
+                        </span>
+                        <span><strong>Comptes séparés</strong><br>Chaque utilisateur dispose de son propre coffre. Les administrateurs ne voient jamais le contenu.</span>
+                    </li>
+                    <li>
+                        <span class="auth-side-bullet" aria-hidden="true">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"></path></svg>
+                        </span>
+                        <span><strong>Pensé pour la prudence</strong><br>Paliers de dose, fenêtres de redose, fiches de substances pédagogiques.</span>
+                    </li>
+                </ul>
+                <div class="auth-side-foot">
+                    <span>© Seuil</span>
+                    <span class="auth-side-foot-sep" aria-hidden="true">·</span>
+                    <a href="confidentialite.html">Confidentialité</a>
+                    <span class="auth-side-foot-sep" aria-hidden="true">·</span>
+                    <a href="mentions-legales.html">Mentions légales</a>
+                    <span class="auth-side-foot-sep" aria-hidden="true">·</span>
+                    <a href="https://github.com/mitige/seuil" target="_blank" rel="noopener noreferrer">GitHub</a>
+                </div>
+            </aside>
+
+            <main class="auth-card">
+                <div class="auth-card-head">
+                    <div class="auth-brand auth-brand-compact">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8.6" r="4.1"></circle><line x1="3.2" y1="15.4" x2="20.8" y2="15.4"></line><line x1="7.4" y1="19.6" x2="16.6" y2="19.6" opacity="0.4"></line></svg>
+                        <span>Seuil</span>
+                    </div>
+                    <h1 id="auth-title" class="auth-title">Bon retour parmi nous</h1>
+                    <p class="auth-subtitle">Connectez-vous pour reprendre votre journal en toute confidentialité.</p>
+                </div>
+
+                <div id="auth-migration-hint" class="auth-migration" style="display:none;">
+                    <strong>Comptes de l'ancienne version détectés.</strong>
+                    Connectez-vous avec vos identifiants habituels : votre compte et vos données seront migrés automatiquement vers le serveur sécurisé.
+                </div>
+
+                <div class="auth-tabs" role="tablist" aria-label="Connexion ou inscription">
+                    <button class="auth-tab-btn active" data-target="login" role="tab" aria-selected="true" type="button">Connexion</button>
+                    <button class="auth-tab-btn" data-target="signup" role="tab" aria-selected="false" type="button">Créer un compte</button>
+                    <span class="auth-tabs-indicator" aria-hidden="true"></span>
+                </div>
+
+                <!-- Panneau CONNEXION -->
+                <section class="auth-panel active" data-panel="login" role="tabpanel">
+                    <form id="login-form" autocomplete="on" novalidate>
+                        <div class="form-group">
+                            <label for="login-username" class="form-label">Identifiant</label>
+                            <div class="auth-input">
+                                <span class="auth-input-icon" aria-hidden="true">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                </span>
+                                <input id="login-username" type="text" class="form-control" autocomplete="username" placeholder="Votre identifiant" required spellcheck="false" autocapitalize="off">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password" class="form-label">
+                                <span>Mot de passe</span>
+                            </label>
+                            <div class="auth-input">
+                                <span class="auth-input-icon" aria-hidden="true">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </span>
+                                <input id="login-password" type="password" class="form-control" autocomplete="current-password" placeholder="••••••••" required>
+                                <button type="button" class="auth-pwd-toggle" data-target="login-password" aria-label="Afficher le mot de passe" aria-pressed="false">
+                                    <span class="eye-on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
+                                    <span class="eye-off" style="display:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M14.12 14.12a3 3 0 0 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg></span>
+                                </button>
+                            </div>
+                        </div>
+                        <p id="login-error" class="auth-error" role="alert"></p>
+                        <button id="login-submit" type="submit" class="btn btn-primary btn-block auth-submit">
+                            <span class="auth-submit-label">Se connecter</span>
+                            <span class="auth-submit-spinner" aria-hidden="true"></span>
+                        </button>
+                        <p class="auth-altlink"><a href="#" data-auth-nav="recovery">Mot de passe oublié ? Utiliser mon code de récupération</a></p>
+                        <p class="auth-fineprint">En vous connectant, vous acceptez les <a href="conditions-utilisation.html">conditions d'utilisation</a>.</p>
+                    </form>
+                </section>
+
+                <!-- Panneau INSCRIPTION -->
+                <section class="auth-panel" data-panel="signup" role="tabpanel">
+                    <p id="signup-disabled-hint" class="auth-disabled-hint" style="display:none;">L'inscription publique est actuellement fermée. Demandez à un administrateur de vous créer un compte.</p>
+                    <form id="signup-form" autocomplete="off" novalidate>
+                        <div class="form-row">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label for="signup-username" class="form-label">Identifiant</label>
+                                <div class="auth-input">
+                                    <input id="signup-username" type="text" class="form-control" autocomplete="username" placeholder="2-32 caractères" required spellcheck="false" autocapitalize="off" pattern="[-a-z0-9_]{2,32}">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label for="signup-display" class="form-label">Nom affiché</label>
+                                <div class="auth-input">
+                                    <input id="signup-display" type="text" class="form-control" autocomplete="nickname" placeholder="Nom visible">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:14px;">
+                            <label for="signup-password" class="form-label">Mot de passe</label>
+                            <div class="auth-input">
+                                <span class="auth-input-icon" aria-hidden="true">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </span>
+                                <input id="signup-password" type="password" class="form-control" autocomplete="new-password" placeholder="8 caractères minimum" required minlength="8">
+                                <button type="button" class="auth-pwd-toggle" data-target="signup-password" aria-label="Afficher le mot de passe" aria-pressed="false">
+                                    <span class="eye-on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
+                                    <span class="eye-off" style="display:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M14.12 14.12a3 3 0 0 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="signup-confirm" class="form-label">Confirmer le mot de passe</label>
+                            <div class="auth-input">
+                                <input id="signup-confirm" type="password" class="form-control" autocomplete="new-password" placeholder="Confirmation" required minlength="8">
+                            </div>
+                        </div>
+                        <p id="signup-error" class="auth-error" role="alert"></p>
+                        <button id="signup-submit" type="submit" class="btn btn-primary btn-block auth-submit">
+                            <span class="auth-submit-label">Créer mon compte</span>
+                            <span class="auth-submit-spinner" aria-hidden="true"></span>
+                        </button>
+                        <p class="auth-fineprint">Vos données sont chiffrées dans votre navigateur avant tout envoi.</p>
+                    </form>
+                </section>
+
+                <!-- Panneau RÉCUPÉRATION (mot de passe oublié) -->
+                <section class="auth-panel" data-panel="recovery" role="tabpanel">
+                    <form id="recovery-form" autocomplete="off" novalidate>
+                        <div class="form-group">
+                            <label for="recovery-username" class="form-label">Identifiant</label>
+                            <div class="auth-input">
+                                <span class="auth-input-icon" aria-hidden="true">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                </span>
+                                <input id="recovery-username" type="text" class="form-control" autocomplete="username" placeholder="Votre identifiant" required spellcheck="false" autocapitalize="off">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="recovery-code" class="form-label">Code de récupération</label>
+                            <div class="auth-input">
+                                <span class="auth-input-icon" aria-hidden="true">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+                                </span>
+                                <input id="recovery-code" type="text" class="form-control mono" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" required spellcheck="false" autocapitalize="characters" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label for="recovery-password" class="form-label">Nouveau mot de passe</label>
+                                <div class="auth-input">
+                                    <input id="recovery-password" type="password" class="form-control" autocomplete="new-password" placeholder="8 caractères minimum" required minlength="8">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label for="recovery-confirm" class="form-label">Confirmer</label>
+                                <div class="auth-input">
+                                    <input id="recovery-confirm" type="password" class="form-control" autocomplete="new-password" placeholder="Confirmation" required minlength="8">
+                                </div>
+                            </div>
+                        </div>
+                        <p id="recovery-error" class="auth-error" role="alert" style="margin-top:10px;"></p>
+                        <button id="recovery-submit" type="submit" class="btn btn-primary btn-block auth-submit">
+                            <span class="auth-submit-label">Récupérer mon compte</span>
+                            <span class="auth-submit-spinner" aria-hidden="true"></span>
+                        </button>
+                        <p class="auth-altlink"><a href="#" data-auth-nav="login">← Retour à la connexion</a></p>
+                        <p class="auth-fineprint">Le code de récupération restaure l'accès <strong>et</strong> vos données chiffrées. Sans lui, un mot de passe oublié signifie des données irrécupérables - c'est le prix de la confidentialité totale.</p>
+                    </form>
+                </section>
+
+                <!-- Panneau SESSION VERROUILLÉE (session serveur active, clé absente de cet onglet) -->
+                <section class="auth-panel" data-panel="locked" role="tabpanel">
+                    <form id="locked-form" autocomplete="on" novalidate>
+                        <div class="auth-locked-user">
+                            <div class="sidebar-user-avatar" aria-hidden="true">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            </div>
+                            <span id="locked-user">Votre compte</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="locked-password" class="form-label">Mot de passe</label>
+                            <div class="auth-input">
+                                <span class="auth-input-icon" aria-hidden="true">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </span>
+                                <input id="locked-password" type="password" class="form-control" autocomplete="current-password" placeholder="••••••••" required>
+                                <button type="button" class="auth-pwd-toggle" data-target="locked-password" aria-label="Afficher le mot de passe" aria-pressed="false">
+                                    <span class="eye-on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
+                                    <span class="eye-off" style="display:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M14.12 14.12a3 3 0 0 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg></span>
+                                </button>
+                            </div>
+                        </div>
+                        <p id="locked-error" class="auth-error" role="alert"></p>
+                        <button id="locked-submit" type="submit" class="btn btn-primary btn-block auth-submit">
+                            <span class="auth-submit-label">Déverrouiller</span>
+                            <span class="auth-submit-spinner" aria-hidden="true"></span>
+                        </button>
+                        <p class="auth-altlink"><a href="#" id="locked-signout">Se déconnecter de ce compte</a></p>
+                        <p class="auth-fineprint">Votre clé de déchiffrement n'est jamais conservée entre les onglets : c'est elle qui garantit que personne d'autre ne peut lire votre coffre.</p>
+                    </form>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div class="app-container">
+        
+        <!-- SIDEBAR DE NAVIGATION -->
+        <aside class="sidebar">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8.6" r="4.1"></circle><line x1="3.2" y1="15.4" x2="20.8" y2="15.4"></line><line x1="7.4" y1="19.6" x2="16.6" y2="19.6" opacity="0.4"></line></svg>
+                <span>Seuil</span>
+            </div>
+            <div class="logo-sub">Réduction des risques</div>
+
+            <nav aria-label="Navigation principale">
+                <ul class="nav-links">
+                <li class="nav-item active" data-tab="tab-journal">
+                    <button>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        Journal
+                    </button>
+                </li>
+                <li class="nav-item" data-tab="tab-stash">
+                    <button>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        Inventaire
+                    </button>
+                </li>
+                <li class="nav-item" data-tab="tab-guide">
+                    <button>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                        Substances
+                    </button>
+                </li>
+                <li class="nav-item" data-tab="tab-stats">
+                    <button>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        Statistiques
+                    </button>
+                </li>
+                <li class="nav-item" data-tab="tab-publication">
+                    <button>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-5"></path></svg>
+                        Infos
+                    </button>
+                </li>
+                <li class="nav-item" data-tab="tab-settings">
+                    <button>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        Paramètres
+                    </button>
+                </li>
+                <li class="nav-item admin-only" data-tab="tab-admin">
+                    <button>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        Administration
+                    </button>
+                </li>
+                </ul>
+            </nav>
+
+            <div class="sidebar-footer">
+                <!-- Carte utilisateur connecté + déconnexion -->
+                <div id="sidebar-user" class="sidebar-user" style="display:none;">
+                    <div id="sidebar-user-avatar" class="sidebar-user-avatar" aria-hidden="true">·</div>
+                    <div class="sidebar-user-meta">
+                        <div id="sidebar-user-name" class="sidebar-user-name">-</div>
+                    </div>
+                    <button id="btn-sign-out" class="sidebar-user-signout" type="button" aria-label="Se déconnecter" title="Se déconnecter">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    </button>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- ZONE DE CONTENU PRINCIPALE -->
+        <main class="main-content" id="contenu-principal" tabindex="-1">
+
+            <!-- 1. ONGLET JOURNAL DE BORD -->
+            <section id="tab-journal" class="tab-pane active">
+                <header class="page-header">
+                    <h1 class="page-title">Journal</h1>
+                    <p class="page-subtitle">Documentez vos prises et gardez une trace claire de vos décisions.</p>
+                </header>
+
+                <div class="card quality-intro-card">
+                    <span class="section-kicker">Réduction des risques</span>
+                    <h2 class="card-title">Ralentir, vérifier, consigner</h2>
+                    <p class="prose">Ce journal remplace l'improvisation par des repères : substance, dose, contexte, horaires et ressentis.</p>
+                    <div class="intro-grid">
+                        <div class="intro-point">
+                            <h3>Avant</h3>
+                            <p>Produit, environnement, mélanges, état mental, fatigue.</p>
+                        </div>
+                        <div class="intro-point">
+                            <h3>Pendant</h3>
+                            <p>Notez les ressentis. Pas de redose tant que la montée n'est pas stabilisée.</p>
+                        </div>
+                        <div class="intro-point">
+                            <h3>Après</h3>
+                            <p>Fréquence, espacement, signaux de perte de contrôle.</p>
+                        </div>
+                    </div>
+                    <p class="fine-print"><strong>Urgence :</strong> perte de connaissance, respiration lente, douleur thoracique, convulsions - appelez le 15 ou 112 (France), le 999 ou 112 (Royaume-Uni) ou le 911 (États-Unis). Cet outil ne remplace pas un avis médical.</p>
+                </div>
+
+                <div class="tracker-layout">
+                    <!-- SECTION GAUCHE : SUIVI ACTIF / CONFIGURATEUR -->
+                    <div>
+                        <!-- CONFIGURATEUR DE SESSION (Quand aucun trip n'est actif) -->
+                        <div id="session-setup" class="card">
+                            <h2 class="card-title">Nouvelle session</h2>
+                            <p class="microcopy">Des informations précises rendent l'historique réellement utile.</p>
+                            <form id="form-start-session">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="substance-select" class="form-label">Substance</label>
+                                        <select id="substance-select" required>
+                                            <option value="">Sélectionnez...</option>
+                                            <!-- Dynamique -->
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="input-custom-substance" class="form-label">Substance non listée</label>
+                                        <input type="text" id="input-custom-substance" class="form-control" placeholder="Nom à consigner si la substance n’est pas dans la base" disabled>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="input-dosage" class="form-label">Dose initiale <span id="dosage-level-badge" style="font-weight:700; margin-left:6px; font-size:11px;"></span></label>
+                                        <input type="number" id="input-dosage" class="form-control" placeholder="ex. 80" min="0" step="any" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="unit-select" class="form-label">Unité de saisie</label>
+                                        <select id="unit-select" class="form-control">
+                                            <option value="mg">mg</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="route-select" class="form-label">Voie d'administration</label>
+                                        <select id="route-select" required>
+                                            <!-- Dynamique selon la substance sélectionnée -->
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="input-set-setting" class="form-label">État mental & environnement</label>
+                                        <select id="input-set-setting">
+                                            <option value="Excellent">Excellent - reposé, calme, entouré</option>
+                                            <option value="Bon" selected>Bon / neutre - conditions stables</option>
+                                            <option value="Fatigué">Fragile - fatigue, stress ou tension</option>
+                                            <option value="Mauvais">Défavorable - anxiété, conflit ou isolement</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="input-time-type" class="form-label">Moment de la prise</label>
+                                        <select id="input-time-type">
+                                            <option value="now" selected>Maintenant</option>
+                                            <option value="past">Date &amp; heure précises</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" id="group-past-time" style="display: none;">
+                                        <label for="input-past-time" class="form-label">Date et heure de la prise</label>
+                                        <input type="datetime-local" step="1" id="input-past-time" class="form-control">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="input-session-notes" class="form-label">Notes de contexte</label>
+                                    <textarea id="input-session-notes" placeholder="Lieu, entourage, repas, hydratation, autres produits…" rows="2"></textarea>
+                                </div>
+
+                                <div style="display: flex; gap: 12px; align-items: center; margin-top: 10px;">
+                                    <input type="checkbox" id="check-deduct-stash" checked>
+                                    <label for="check-deduct-stash" style="font-size: 13px; color: var(--color-text-muted); cursor: pointer;">Déduire cette quantité de l'inventaire</label>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 20px;">Démarrer le suivi</button>
+                            </form>
+                        </div>
+
+                        <!-- LIVE TRACKER (Quand une session est en cours) -->
+                        <div id="active-session" class="card active-session-card" style="display: none;">
+                            <div class="card-title">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span class="substance-badge" id="active-substance-badge"></span>
+                                    <h2 id="active-substance-title" style="margin: 0;"></h2>
+                                </div>
+                                <span class="indicator-dot"></span>
+                            </div>
+
+                            <div class="form-row" style="margin-bottom: 10px;">
+                                <div>
+                                    <span style="font-size: 13px; color: var(--color-text-muted);">Temps écoulé</span>
+                                    <div class="timer-display" id="active-timer">00:00:00</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="font-size: 13px; color: var(--color-text-muted);">Dose cumulée</span>
+                                    <div style="font-size: 26px; font-weight: 700; color: #ffffff; margin-top: 25px;" id="active-cumulative-dose"></div>
+                                </div>
+                            </div>
+
+                            <!-- Courbe de concentration cumulée en direct -->
+                            <div class="timeline-progress-container">
+                                <label class="form-label" style="margin-bottom: 6px;">Courbe estimative des effets (repère, pas mesure médicale)</label>
+                                <div id="active-curve-container" class="effect-curve-stage">
+                                    <!-- Inséré en JS (SVG) -->
+                                </div>
+                            </div>
+
+                            <!-- COMPAGNON DE SÉCURITÉ EN DIRECT -->
+                            <div class="live-safety" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                                <h3 class="live-safety-title">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                    Sécurité en direct
+                                </h3>
+                                <div id="redose-status" class="redose-status neutral">
+                                    <div class="redose-status-main"></div>
+                                    <div class="redose-progress"><span></span></div>
+                                </div>
+                                <ul id="safety-tips" class="safety-tips"></ul>
+                            </div>
+
+                            <!-- Substances additionnelles (poly-conso) -->
+                            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                                <h3 style="font-size: 15px; margin-bottom: 6px;">Substances suivies</h3>
+                                <div id="active-substances-list" class="active-subs-list"></div>
+                                <button type="button" id="btn-add-substance" class="btn btn-secondary btn-sm" style="margin-top:10px;">+ Ajouter une substance au suivi</button>
+                                <form id="form-add-substance" class="form-row" style="display:none; grid-template-columns:2fr 1.1fr 1.4fr 1.2fr; gap:10px; align-items:end; margin-top:12px;">
+                                    <div class="form-group" style="margin-bottom:0;">
+                                        <label for="add-sub-select" class="form-label">Substance</label>
+                                        <select id="add-sub-select"></select>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:0;">
+                                        <label for="add-sub-dose" class="form-label">Dose</label>
+                                        <input type="number" id="add-sub-dose" class="form-control" min="0" step="any">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:0;">
+                                        <label for="add-sub-unit" class="form-label">Unité de saisie</label>
+                                        <select id="add-sub-unit" class="form-control">
+                                            <option value="mg">mg</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:0;">
+                                        <label for="add-sub-route" class="form-label">Voie</label>
+                                        <select id="add-sub-route" required>
+                                            <!-- Dynamique selon la substance sélectionnée -->
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:0;">
+                                        <label for="add-sub-time-type" class="form-label">Moment de la prise</label>
+                                        <select id="add-sub-time-type">
+                                            <option value="now" selected>Maintenant</option>
+                                            <option value="past">Date &amp; heure précises</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" id="group-add-sub-time" style="margin-bottom:0; display:none;">
+                                        <label for="add-sub-time" class="form-label">Date et heure de la prise</label>
+                                        <input type="datetime-local" step="1" id="add-sub-time" class="form-control">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-sm">Suivre</button>
+                                </form>
+                            </div>
+
+                            <!-- Formulaire de redosage rapide -->
+                            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                                <h3 style="font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="12" y2="12"></line></svg>
+                                    Ajouter une dose supplémentaire
+                                </h3>
+                                <form id="form-redose">
+                                    <div class="form-row" style="grid-template-columns: 1.2fr 1fr 0.9fr 1.2fr; gap: 12px; margin-bottom: 12px;">
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label for="redose-target" class="form-label">Substance</label>
+                                            <select id="redose-target"></select>
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label for="input-redose-amount" class="form-label">Quantité <span id="redose-level-badge" style="font-weight:700; margin-left:6px; font-size:11px;"></span></label>
+                                            <input type="number" id="input-redose-amount" class="form-control" min="0" step="any" required>
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label for="input-redose-unit" class="form-label">Unité de saisie</label>
+                                            <select id="input-redose-unit" class="form-control">
+                                                <option value="mg">mg</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label for="input-redose-route" class="form-label">Voie du redosage</label>
+                                            <select id="input-redose-route" required>
+                                                <!-- Dynamique selon la substance sélectionnée -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-row" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label for="input-redose-time-type" class="form-label">Moment du redose</label>
+                                            <select id="input-redose-time-type">
+                                                <option value="now" selected>Maintenant</option>
+                                                <option value="past">Date &amp; heure précises</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group" id="group-redose-time" style="margin-bottom: 0; display: none;">
+                                            <label for="input-redose-time" class="form-label">Date et heure du redose</label>
+                                            <input type="datetime-local" step="1" id="input-redose-time" class="form-control">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary btn-block">Valider</button>
+                                </form>
+                            </div>
+
+                            <!-- Entrée de note en direct -->
+                            <div style="margin-top: 20px;">
+                                <h3 style="font-size: 15px; margin-bottom: 10px;">Ajouter une note horodatée</h3>
+                                <p class="microcopy">Notez les ressentis physiques, émotionnels et cognitifs plutôt que de vous fier à la mémoire après coup.</p>
+                                <div class="form-row" style="grid-template-columns: 3fr 1fr; align-items: end;">
+                                    <div style="margin-bottom:0;" class="form-group">
+                                        <input type="text" id="input-live-note" class="form-control" placeholder="Ressenti, anxiété, température, nausée, confusion, besoin d’aide…">
+                                    </div>
+                                    <button id="btn-add-live-note" class="btn btn-secondary btn-block">Ajouter</button>
+                                </div>
+                            </div>
+
+                            <!-- Bouton pour clore la session -->
+                            <button id="btn-end-session" class="btn btn-danger btn-block" style="margin-top: 24px;">Clore la session et enregistrer le bilan</button>
+                        </div>
+                    </div>
+
+                    <!-- SECTION DROITE : NOTES EN DIRECT ET RAPPELS -->
+                    <div>
+                        <!-- Notes en temps réel -->
+                        <div class="card" style="height: 100%;">
+                            <h2 class="card-title">Chronologie</h2>
+                            <div id="live-log-empty" style="text-align: center; color: var(--color-text-muted); padding: 40px 0;">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin-bottom: 10px; opacity: 0.5;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                <p>Aucune session en cours.</p>
+                            </div>
+                            <div id="live-log-feed" class="log-feed">
+                                <!-- Rempli dynamiquement -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION HISTORIQUE -->
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-title">
+                        <h2>Historique des sessions</h2>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <input type="text" id="input-history-search" class="form-control form-control-sm" placeholder="Filtrer par substance…" style="max-width: 200px;">
+                        </div>
+                    </div>
+                    <div id="history-empty" style="text-align: center; color: var(--color-text-muted); padding: 40px 0;">
+                        Aucune session enregistrée.
+                    </div>
+                    <div id="history-list" class="history-feed">
+                        <!-- Liste dynamique -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. ONGLET MON STASH (INVENTAIRE) -->
+            <section id="tab-stash" class="tab-pane">
+                <header class="page-header">
+                    <h1 class="page-title">Inventaire</h1>
+                    <p class="page-subtitle">Suivez vos quantités pour limiter les confusions et les prises non planifiées.</p>
+                </header>
+
+                <div class="grid grid-2">
+                    <!-- CONFIGURATEUR D'AJOUT -->
+                    <div class="card">
+                        <h2 class="card-title">Ajouter une entrée</h2>
+                            <p class="microcopy">Étiquetez toujours vos contenants hors application.</p>
+                        <form id="form-add-stash">
+                            <div class="form-group">
+                                <label for="stash-substance-select" class="form-label">Substance</label>
+                                <select id="stash-substance-select" required>
+                                    <!-- Rempli dynamiquement -->
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="input-stash-qty" class="form-label">Quantité initiale</label>
+                                    <input type="number" id="input-stash-qty" class="form-control" min="0" step="any" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="stash-unit-display" class="form-label">Unité</label>
+                                    <input type="text" id="stash-unit-display" class="form-control" value="mg" readonly>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="input-stash-form" class="form-label">Forme physique</label>
+                                <select id="input-stash-form">
+                                    <option value="Poudre / Cristaux">Poudre / Cristaux</option>
+                                    <option value="Comprimés / pilules">Comprimés / pilules</option>
+                                    <option value="Buvard / carton">Buvard / carton</option>
+                                    <option value="Liquide">Liquide</option>
+                                    <option value="Plante / Champignons séchés">Plante / Champignons séchés</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Enregistrer dans l’inventaire</button>
+                        </form>
+                    </div>
+
+                    <!-- INFOS STOCKAGE -->
+                    <div class="card disclaimer-card">
+                        <h2 class="card-title" style="color: var(--color-int-caution);">Stockage</h2>
+                        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px; color: var(--color-text-muted);">
+                            <p><strong>Stabilité :</strong> contenant fermé, sec, sombre, clairement identifié.</p>
+                            <p><strong>Séparation :</strong> jamais plusieurs substances dans un même contenant ; étiquettes lisibles, sans confusion possible avec nourriture ou médicaments.</p>
+                            <p><strong>Vérification :</strong> produit d'origine incertaine = produit inconnu. Les tests réactifs et l'analyse en CAARUD réduisent le risque d'erreur.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LISTE DU STASH -->
+                <div class="card" style="margin-top: 24px;">
+                    <h2 class="card-title">État de l'inventaire</h2>
+                    <div id="stash-empty" style="text-align: center; color: var(--color-text-muted); padding: 40px 0;">
+                        Inventaire vide.
+                    </div>
+                    <div id="stash-list-container" class="stash-list">
+                        <!-- Rempli en JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. ONGLET BASE DE DONNÉES -->
+            <section id="tab-guide" class="tab-pane">
+                <header class="page-header">
+                    <h1 class="page-title">Substances</h1>
+                    <p class="page-subtitle">Fiches pédagogiques, repères de durée et analyse des interactions.</p>
+                </header>
+
+                <div class="card quality-intro-card">
+                    <span class="section-kicker">À lire avant les fiches</span>
+                    <h2 class="card-title">Une base d'information, pas une garantie de sécurité</h2>
+                    <p class="prose">La réaction réelle dépend du produit, de la tolérance, du contexte, des traitements et des mélanges. « Risque faible » ne signifie jamais « sans danger ».</p>
+                    <div class="resource-list">
+                        <div class="resource-item"><strong>Aide en France :</strong> Drogues Info Service - 0 800 23 13 13, anonyme et gratuit. Urgence vitale : 15 ou 112.</div>
+                        <div class="resource-item"><strong>Aide au Royaume-Uni :</strong> FRANK - 0300 123 6600, SMS 82111, confidentiel. Urgence vitale : 999 ou 112.</div>
+                        <div class="resource-item"><strong>Aide aux États-Unis :</strong> SAMHSA - 1-800-662-HELP (4357), 24h/24 ; crise suicidaire ou émotionnelle : 988. Urgence vitale : 911.</div>
+                    </div>
+                </div>
+
+                <!-- COMPARATEUR MULTI-COURBES -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <h2 class="card-title">Comparateur de courbes</h2>
+                    <p class="microcopy">Superposez 2 à 5 courbes d'effet théoriques. Repère pédagogique, pas une mesure médicale.</p>
+                    <div class="form-group">
+                        <label for="compare-select" class="form-label">Ajouter une substance à comparer</label>
+                        <select id="compare-select"><option value="">Sélectionnez…</option></select>
+                    </div>
+                    <div id="compare-empty" class="compare-empty">Aucune substance sélectionnée - ajoutez-en pour afficher les courbes.</div>
+                    <div id="compare-chips" class="compare-chips"></div>
+                    <div id="compare-chart" class="compare-chart" style="display:none;"></div>
+                    <div id="compare-legend" class="compare-legend"></div>
+                </div>
+
+                <!-- SECTION 1 : RECHERCHE DE SUBSTANCE -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <h2 class="card-title">Fiches substances</h2>
+                    <p class="microcopy">Effets, facteurs de risque, signaux d'alerte, récupération et repères de durée. Paliers informatifs, jamais prescriptifs.</p>
+                    <div class="guide-search">
+                        <input type="text" id="input-guide-search" class="form-control" placeholder="Rechercher par nom ou catégorie - ex. MDMA, kétamine, dépresseur…">
+                    </div>
+                    <div id="guide-substances-list" class="substance-grid">
+                        <!-- Rempli dynamiquement -->
+                    </div>
+                </div>
+
+                <!-- SECTION 2 : DETECTEUR D'INTERACTIONS -->
+                <div class="card">
+                    <h2 class="card-title">Analyseur de mélanges</h2>
+                    <p class="microcopy">Sélectionnez deux substances. En cas de doute, considérez le mélange comme risqué.</p>
+                    <div class="checker-box">
+                        <div class="select-sub-row">
+                            <div class="form-group">
+                                <label for="inter-select-1" class="form-label">Première substance</label>
+                                <select id="inter-select-1">
+                                    <option value="">Sélectionnez...</option>
+                                    <!-- Rempli en JS -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="inter-select-2" class="form-label">Deuxième substance</label>
+                                <select id="inter-select-2">
+                                    <option value="">Sélectionnez...</option>
+                                    <!-- Rempli en JS -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Résultat -->
+                        <div id="interaction-result" class="result-card">
+                            <div class="result-title" id="inter-result-title">
+                                <!-- Dynamique -->
+                            </div>
+                            <p id="inter-result-note" style="line-height: 1.5; font-size: 14px;">
+                                <!-- Dynamique -->
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 3 : ENREGISTRER SUBSTANCE PERSO -->
+                <div class="card" style="margin-top: 24px;">
+                    <h2 class="card-title">Fiche personnalisée</h2>
+                    <p class="microcopy">Usage personnel uniquement. Les informations saisies ne sont pas vérifiées.</p>
+                    <form id="form-create-custom-sub">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="custom-db-name" class="form-label">Nom de la substance</label>
+                                <input type="text" id="custom-db-name" class="form-control" placeholder="ex. 3-MMC, AL-LAD…" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="custom-db-cat" class="form-label">Famille principale</label>
+                                <select id="custom-db-cat" required>
+                                    <option value="stimulant">Stimulant</option>
+                                    <option value="psychedelic">Psychédélique</option>
+                                    <option value="depressant">Dépresseur</option>
+                                    <option value="dissociative">Dissociatif</option>
+                                    <option value="cannabinoid">Cannabinoïde</option>
+                                    <option value="empathogen">Empathogène</option>
+                                    <option value="other">Autre / incertain</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="custom-db-unit" class="form-label">Unité de mesure</label>
+                                <input type="text" id="custom-db-unit" class="form-control" placeholder="ex. mg, µg, ml" required>
+                            </div>
+                        </div>
+
+                        <h3 style="font-size: 14px; margin: 15px 0 8px 0; color: var(--color-primary);">Paliers indicatifs de dosage (valeurs minimales en unité)</h3>
+                        <div class="form-row" style="grid-template-columns: repeat(5, 1fr); gap: 10px;">
+                            <div class="form-group">
+                                <label for="custom-db-dose-threshold" class="form-label">Seuil</label>
+                                <input type="number" id="custom-db-dose-threshold" class="form-control" placeholder="ex: 5" min="0" step="any" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="custom-db-dose-light" class="form-label">Léger</label>
+                                <input type="number" id="custom-db-dose-light" class="form-control" placeholder="ex: 15" min="0" step="any" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="custom-db-dose-common" class="form-label">Commun</label>
+                                <input type="number" id="custom-db-dose-common" class="form-control" placeholder="ex: 30" min="0" step="any" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="custom-db-dose-strong" class="form-label">Fort</label>
+                                <input type="number" id="custom-db-dose-strong" class="form-control" placeholder="ex: 50" min="0" step="any" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="custom-db-dose-heavy" class="form-label">Intense</label>
+                                <input type="number" id="custom-db-dose-heavy" class="form-control" placeholder="ex: 80" min="0" step="any" required>
+                            </div>
+                        </div>
+
+                        <h3 style="font-size: 14px; margin: 15px 0 8px 0; color: var(--color-primary);">Durées des phases (en minutes)</h3>
+                        <div class="form-row" style="grid-template-columns: repeat(5, 1fr); gap: 10px;">
+                            <div class="form-group">
+                                <label for="custom-db-dur-onset" class="form-label">Début des effets</label>
+                                <input type="number" id="custom-db-dur-onset" class="form-control" placeholder="ex: 20" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="custom-db-dur-comeup" class="form-label">Montée</label>
+                                <input type="number" id="custom-db-dur-comeup" class="form-control" placeholder="ex: 30" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="custom-db-dur-peak" class="form-label">Plateau / pic</label>
+                                <input type="number" id="custom-db-dur-peak" class="form-control" placeholder="ex: 120" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="custom-db-dur-offset" class="form-label">Descente</label>
+                                <input type="number" id="custom-db-dur-offset" class="form-control" placeholder="ex: 90" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="custom-db-dur-total" class="form-label">Durée totale</label>
+                                <input type="number" id="custom-db-dur-total" class="form-control" placeholder="ex: 260" min="0" required>
+                            </div>
+                        </div>
+
+                        <h3 style="font-size: 14px; margin: 15px 0 8px 0; color: var(--color-primary);">Règles de prudence à afficher dans la fiche</h3>
+                        <div class="form-group">
+                            <label for="custom-db-rule-1" class="form-label">Conseil 1</label>
+                            <input type="text" id="custom-db-rule-1" class="form-control" placeholder="ex. Éviter tout mélange avec des dépresseurs…" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="custom-db-rule-2" class="form-label">Conseil 2</label>
+                            <input type="text" id="custom-db-rule-2" class="form-control" placeholder="ex. Noter l’heure de prise et éviter les redoses rapprochées…" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Enregistrer la substance</button>
+                        <span id="custom-db-status" style="font-size: 13px; margin-left: 15px; font-weight: 500;"></span>
+                    </form>
+                </div>
+            </section>
+
+            <!-- 4. ONGLET STATISTIQUES ET RÈGLES -->
+            <section id="tab-stats" class="tab-pane">
+                <header class="page-header">
+                    <h1 class="page-title">Statistiques</h1>
+                    <p class="page-subtitle">Tendances, espacements et signaux qui méritent une pause.</p>
+                </header>
+
+                <!-- Cartes d'aperçu -->
+                <div class="admin-stats" id="stats-overview" style="margin-bottom:24px;">
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="M7 14l3-3 3 3 5-5"></path></svg>
+                        </div>
+                        <div>
+                            <div class="admin-stat-label">Sessions</div>
+                            <div class="admin-stat-value mono" id="stat-total-sessions">0</div>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                        </div>
+                        <div>
+                            <div class="admin-stat-label">Substances suivies</div>
+                            <div class="admin-stat-value mono" id="stat-distinct-subs">0</div>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+                        </div>
+                        <div>
+                            <div class="admin-stat-label">Depuis la dernière</div>
+                            <div class="admin-stat-value mono" id="stat-days-since">-</div>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"></path></svg>
+                        </div>
+                        <div>
+                            <div class="admin-stat-label">Espacement moyen</div>
+                            <div class="admin-stat-value mono" id="stat-avg-gap">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-2" style="margin-bottom: 24px;">
+                    <!-- RÈGLES DE SÉCURITÉ AUTOMATIQUES -->
+                    <div class="card">
+                        <h2 class="card-title">Espacements & alertes</h2>
+                        <div id="rules-status-list" class="rules-container">
+                            <!-- Rempli dynamiquement -->
+                        </div>
+                    </div>
+
+                    <!-- AVERTISSEMENTS PRATIQUES -->
+                    <div class="card disclaimer-card">
+                        <h2 class="card-title" style="color: var(--color-int-caution);">Limites à connaître</h2>
+                        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px; color: var(--color-text-muted);">
+                            <p><strong>MDMA :</strong> l'espacement réduit descentes sévères, usage compulsif et récupération incomplète.</p>
+                            <p><strong>Psychédéliques :</strong> le repos psychologique compte autant que la tolérance physique.</p>
+                            <p><strong>Kétamine / dissociatifs :</strong> les usages répétés augmentent les risques urinaires, cognitifs et de dépendance. Symptômes urinaires = consulter.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GRAPHIQUES SVG DE CONSOMMATIONS -->
+                <div class="grid grid-2">
+                    <div class="card">
+                        <h2 class="card-title">Fréquence des sessions - 30 derniers jours</h2>
+                        <div class="chart-container" id="chart-frequency-container">
+                            <!-- Graphique SVG inséré ici -->
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2 class="card-title">Substances les plus enregistrées</h2>
+                        <div class="chart-container" id="chart-substances-container">
+                            <!-- Graphique SVG inséré ici -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- 5. ONGLET INFOS PUBLICATION / CONFORMITÉ -->
+            <section id="tab-publication" class="tab-pane">
+                <header class="page-header">
+                    <h1 class="page-title">Infos & conformité</h1>
+                    <p class="page-subtitle">Cadre d'utilisation, urgences, confidentialité et mentions légales.</p>
+                </header>
+
+                <div class="card quality-intro-card">
+                    <span class="section-kicker">Cadre d’utilisation</span>
+                    <h2 class="card-title">Avertissement médical, légal et éthique</h2>
+                    <p class="prose">Seuil est un outil d’information et d’auto-suivi. Il <strong>n’encourage pas</strong> la consommation de substances psychoactives et ne garantit jamais la sécurité d’une prise, d’un dosage ou d’un mélange. Les contenus intégrés servent à ralentir les décisions, documenter les signaux d’alerte et orienter vers des ressources spécialisées.</p>
+                    <div class="intro-grid">
+                        <div class="intro-point">
+                            <h3>Pas un avis médical</h3>
+                            <p>Les fiches ne remplacent ni un professionnel de santé, ni une analyse de produit, ni un accompagnement addictologique.</p>
+                        </div>
+                        <div class="intro-point">
+                            <h3>Pas une validation de sécurité</h3>
+                            <p>Un palier indicatif ou une interaction “faible” ne signifie jamais “sans danger”. Le produit réel, les traitements, la tolérance et le contexte peuvent tout changer.</p>
+                        </div>
+                        <div class="intro-point">
+                            <h3>Usage personnel</h3>
+                            <p>L’application conserve les données dans un coffre serveur chiffré côté navigateur. Elle ne doit pas être utilisée pour gérer les consommations d’autres personnes sans cadre professionnel adapté.</p>
+                        </div>
+                    </div>
+                    <p class="fine-print"><strong>Urgence vitale :</strong> perte de connaissance, respiration lente ou irrégulière, douleur thoracique, hyperthermie, convulsions, confusion sévère ou suspicion de surdose = appelez immédiatement le 15 ou le 112.</p>
+                    <div class="resource-list" style="margin-top:14px;">
+                        <div class="resource-item"><strong>Aide en France :</strong> Drogues Info Service - 0 800 23 13 13, anonyme et gratuit. Urgence vitale : 15 ou 112.</div>
+                        <div class="resource-item"><strong>Aide au Royaume-Uni :</strong> FRANK - 0300 123 6600, SMS 82111, confidentiel. Urgence vitale : 999 ou 112.</div>
+                        <div class="resource-item"><strong>Aide aux États-Unis :</strong> SAMHSA - 1-800-662-HELP (4357), 24h/24 ; crise suicidaire ou émotionnelle : 988. Urgence vitale : 911.</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-2">
+                    <div class="card emergency-card">
+                        <h2 class="card-title">Urgences & aides - France, Royaume-Uni, États-Unis</h2>
+                        <div class="info-list">
+                            <div class="info-row"><span>SAMU</span><strong>15</strong><small>urgence médicale, malaise grave, détresse respiratoire, surdose suspectée</small></div>
+                            <div class="info-row"><span>Urgence européenne</span><strong>112</strong><small>numéro d’urgence accessible dans l’Union européenne</small></div>
+                            <div class="info-row"><span>Urgence accessible</span><strong>114</strong><small>visio, tchat, images ou SMS pour personnes sourdes, malentendantes, aphasiques ou en difficulté pour parler</small></div>
+                            <div class="info-row"><span>Drogues Info Service</span><strong>0 800 23 13 13</strong><small>écoute, information et orientation, anonyme et gratuit en France</small></div>
+                            <div class="info-row"><span>Prévention suicide</span><strong>3114</strong><small>détresse psychologique ou pensées suicidaires, 24h/24 et 7j/7</small></div>
+                            <div class="info-row"><span>Royaume-Uni</span><strong>999 / 112</strong><small>urgence médicale ou danger immédiat : ambulance, police, pompiers</small></div>
+                            <div class="info-row"><span>FRANK</span><strong>0300 123 6600 / SMS 82111</strong><small>information drogues confidentielle au Royaume-Uni</small></div>
+                            <div class="info-row"><span>États-Unis</span><strong>911</strong><small>urgence vitale ou danger immédiat</small></div>
+                            <div class="info-row"><span>SAMHSA</span><strong>1-800-662-HELP (4357)</strong><small>aide traitement et orientation, 24h/24 aux États-Unis</small></div>
+                            <div class="info-row"><span>988 Lifeline</span><strong>988</strong><small>crise suicidaire ou détresse émotionnelle, 24h/24 aux États-Unis</small></div>
+                            <div class="info-row"><span>Poison Help</span><strong>1-800-222-1222</strong><small>centre antipoison national, 24h/24 et 7j/7</small></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2 class="card-title">Confidentialité & coffre serveur</h2>
+                        <div class="info-list compact">
+                            <div class="info-row"><span>Données stockées</span><strong>Sessions, inventaire, fiches personnalisées, paramètres</strong><small>stockés sur ce serveur sous forme chiffrée</small></div>
+                            <div class="info-row"><span>Transmission réseau</span><strong>Coffre chiffré</strong><small>le serveur reçoit un blob chiffré, pas les données lisibles</small></div>
+                            <div class="info-row"><span>Cookies</span><strong>Aucun cookie publicitaire</strong><small>le navigateur garde uniquement l’identifiant et la clé locale du coffre</small></div>
+                            <div class="info-row"><span>Chiffrement</span><strong>Automatique côté navigateur</strong><small>AES-GCM via WebCrypto avant envoi au serveur</small></div>
+                            <div class="info-row"><span>Limites</span><strong>Protection dépendante de l’appareil</strong><small>un navigateur compromis, un appareil partagé ou une sauvegarde non protégée peut exposer l’historique</small></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-2" style="margin-top: 24px;">
+                    <div class="card legal-card">
+                        <h2 class="card-title">Mentions légales</h2>
+                        <p class="microcopy">Informations relatives à l'éditeur et à l'hébergement de Seuil.</p>
+                        <dl class="legal-list">
+                            <div><dt>Éditeur du site</dt><dd>op</dd></div>
+                            <div><dt>Responsable de publication</dt><dd>op et alphafboss</dd></div>
+                            <div><dt>Contact</dt><dd><a href="mailto:eeev442@gmail.com">eeev442@gmail.com</a></dd></div>
+                            <div><dt>Hébergement</dt><dd>Serveur personnel auto-hébergé par l'éditeur</dd></div>
+                            <div><dt>Propriété intellectuelle</dt><dd>Contenus, interface et base de données : propriété de l'éditeur, réutilisation soumise à autorisation.</dd></div>
+                            <div><dt>Signalement</dt><dd>Erreur, source obsolète, bug ou formulation à risque : <a href="mailto:eeev442@gmail.com">eeev442@gmail.com</a>.</dd></div>
+                        </dl>
+                    </div>
+
+                    <div class="card">
+                        <h2 class="card-title">Conditions d’utilisation</h2>
+                        <div class="resource-list">
+                            <div class="resource-item"><strong>Usage prévu :</strong> information, auto-suivi privé, prévention, réduction des risques et documentation personnelle.</div>
+                            <div class="resource-item"><strong>Usage exclu :</strong> vente, acquisition, préparation, incitation ou organisation de consommation de substances.</div>
+                            <div class="resource-item"><strong>Responsabilité :</strong> l’utilisateur reste responsable des données qu’il saisit, exporte ou conserve sur son appareil.</div>
+                            <div class="resource-item"><strong>Mise à jour :</strong> les fiches doivent être relues régulièrement, car les produits, pratiques, alertes sanitaires et cadres légaux évoluent.</div>
+                        </div>
+                        <div class="doc-links" aria-label="Documents publics">
+                            <a class="doc-link" href="mentions-legales.html">Mentions légales</a>
+                            <a class="doc-link" href="confidentialite.html">Confidentialité</a>
+                            <a class="doc-link" href="conditions-utilisation.html">Conditions</a>
+                            <a class="doc-link" href="accessibilite.html">Accessibilité</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-2" style="margin-top: 24px;">
+                    <div class="card disclaimer-card">
+                        <h2 class="card-title" style="color: var(--color-int-caution);">Accessibilité & déploiement partenaire</h2>
+                        <p class="prose">Seuil intègre les principaux repères d’accessibilité attendus pour un usage partenarial et une mise en production encadrée.</p>
+                        <p class="fine-print">L’accessibilité est suivie comme une exigence produit continue : langue de page, labels visibles, lien d’évitement, contrastes élevés, focus clavier, respect de `prefers-reduced-motion`, navigation par boutons et contenus structurés.</p>
+                        <p class="fine-print">Pour un déploiement institutionnel ou un partenariat formalisé, un audit RGAA/WCAG et une déclaration d’accessibilité peuvent être produits dans le cadre de gouvernance du partenaire, afin de documenter officiellement le niveau de conformité et les corrections prioritaires éventuelles.</p>
+                    </div>
+
+                    <div class="card">
+                        <h2 class="card-title">Sources & maintenance éditoriale</h2>
+                        <p class="prose">Les fiches s’appuient sur des sources de réduction des risques, d’addictologie et de veille publique. Le fichier <strong>SOURCES.md</strong> documente les sources utilisées et les limites méthodologiques.</p>
+                        <div class="resource-list">
+                            <div class="resource-item"><strong>Dernière revue éditoriale :</strong> 21 juin 2026.</div>
+                            <div class="resource-item"><strong>Fréquence conseillée :</strong> relire les fiches et interactions au minimum tous les 3 à 6 mois, ou immédiatement en cas d’alerte sanitaire.</div>
+                            <div class="resource-item"><strong>Priorité :</strong> corriger rapidement toute information pouvant laisser croire qu’un dosage, un mélange ou une pratique serait “sûr”.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 24px;">
+                    <span class="section-kicker">Open source</span>
+                    <h2 class="card-title">Code source</h2>
+                    <p class="prose">Le code de Seuil est public et auditable sur GitHub. Vous pouvez l’inspecter, comprendre exactement comment vos données sont chiffrées, signaler un problème ou proposer une amélioration.</p>
+                    <div class="doc-links" aria-label="Code source">
+                        <a class="doc-link" href="https://github.com/mitige/seuil" target="_blank" rel="noopener noreferrer">Dépôt GitHub</a>
+                    </div>
+                    <p class="fine-print">Si Seuil vous est utile, une ⭐ sur le dépôt l’aide à se faire connaître et à rester maintenu.</p>
+                </div>
+            </section>
+
+            <!-- 6. ONGLET PARAMÈTRES -->
+            <section id="tab-settings" class="tab-pane">
+                <header class="page-header">
+                    <h1 class="page-title">Paramètres</h1>
+                    <p class="page-subtitle">Compte, sauvegardes et contrôle de vos données.</p>
+                </header>
+
+                <div class="card" style="margin-bottom:24px;">
+                    <h2 class="card-title">Langue</h2>
+                    <p class="microcopy">Par défaut, Seuil utilise la langue de votre navigateur. Vous pouvez forcer le français ou l'anglais ici.</p>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="language-select" class="form-label">Langue de l'interface</label>
+                        <select id="language-select" class="form-control">
+                            <option value="auto">Automatique (navigateur)</option>
+                            <option value="fr">Français</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    <p id="language-status" class="microcopy" aria-live="polite" style="margin-top:10px;"></p>
+                </div>
+
+                <div class="card" style="margin-bottom:24px;">
+                    <h2 class="card-title">Unités de saisie</h2>
+                    <p class="microcopy">Personnalisez les unités qualitatives proposées dans le journal. Les unités exactes restent toujours disponibles.</p>
+                    <form id="dose-unit-settings-form">
+                        <div class="form-group">
+                            <label for="dose-unit-list-input" class="form-label">Unités personnalisées</label>
+                            <input type="text" id="dose-unit-list-input" class="form-control" placeholder="Ex. ligne, joint, verre, comprimé" autocomplete="off">
+                        </div>
+                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                            <button type="submit" class="btn btn-secondary btn-sm">Enregistrer les unités</button>
+                            <button type="button" id="dose-unit-reset" class="btn btn-secondary btn-sm">Réinitialiser</button>
+                        </div>
+                        <p id="dose-unit-settings-status" class="microcopy" aria-live="polite" style="margin-top:10px;"></p>
+                    </form>
+                </div>
+
+                <!-- MON COMPTE -->
+                <div class="card" id="account-card" style="margin-bottom:24px;">
+                    <h2 class="card-title">
+                        Mon compte
+                        <span id="account-identity" class="card-title-aside"></span>
+                    </h2>
+                    <div class="account-grid">
+                        <div class="account-section">
+                            <h3 class="account-section-title">Mot de passe</h3>
+                            <p class="microcopy">Changer de mot de passe ré-enveloppe votre clé de chiffrement et déconnecte vos autres appareils.</p>
+                            <form id="account-pwd-form" autocomplete="off">
+                                <div class="form-group">
+                                    <label for="account-pwd-current" class="form-label">Mot de passe actuel</label>
+                                    <input id="account-pwd-current" type="password" class="form-control" autocomplete="current-password" required>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group" style="margin-bottom:0;">
+                                        <label for="account-pwd-new" class="form-label">Nouveau</label>
+                                        <input id="account-pwd-new" type="password" class="form-control" autocomplete="new-password" minlength="8" required>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:0;">
+                                        <label for="account-pwd-confirm" class="form-label">Confirmer</label>
+                                        <input id="account-pwd-confirm" type="password" class="form-control" autocomplete="new-password" minlength="8" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-secondary btn-sm" style="margin-top:14px;">Mettre à jour</button>
+                                <p id="account-pwd-status" class="admin-form-status" aria-live="polite"></p>
+                            </form>
+                        </div>
+                        <div class="account-section">
+                            <h3 class="account-section-title">Code de récupération</h3>
+                            <p id="account-recovery-status" class="microcopy">-</p>
+                            <button id="account-recovery-rotate" type="button" class="btn btn-secondary btn-sm">Générer un nouveau code</button>
+                            <h3 class="account-section-title" style="margin-top:22px;">Appareils connectés</h3>
+                            <div id="account-sessions-list" class="session-list"></div>
+                            <button id="account-revoke-others" type="button" class="btn btn-secondary btn-sm" style="margin-top:10px;">Déconnecter les autres appareils</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-2">
+                    <!-- SAUVEGARDES ET IMPORT/EXPORT -->
+                    <div class="card">
+                        <h2 class="card-title">Sauvegarde</h2>
+                        <p class="microcopy">Vos données vivent dans un coffre serveur chiffré. Exportez régulièrement une copie JSON.</p>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <button id="btn-export-data" class="btn btn-secondary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Exporter mes données (JSON)
+                            </button>
+                            
+                            <label class="btn btn-secondary" style="margin: 0; cursor: pointer; text-align: center;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                Importer une sauvegarde JSON
+                                <input type="file" id="input-import-file" accept=".json" style="display: none;">
+                            </label>
+                            <span id="import-status-text" style="font-size: 12px; text-align: center; color: var(--color-int-low-risk);"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ZONE DE DANGER -->
+                <div class="card" style="margin-top: 24px; border-color: rgba(239, 68, 68, 0.3);">
+                    <h2 class="card-title" style="color: #ef4444;">Zone de suppression</h2>
+                    <p class="microcopy">Supprime définitivement votre compte, votre coffre chiffré, vos sessions ouvertes, l'historique, l'inventaire et les fiches personnalisées. Exportez une sauvegarde avant.</p>
+                    <button id="btn-factory-reset" class="btn btn-danger">Supprimer mon compte et mon coffre</button>
+                </div>
+
+            </section>
+
+            <!-- 7. ONGLET ADMINISTRATION (visible uniquement pour les administrateurs) -->
+            <section id="tab-admin" class="tab-pane admin-only">
+                <header class="page-header">
+                    <div class="admin-page-head">
+                        <div>
+                            <span class="section-kicker">Console administrateur</span>
+                            <h1 class="page-title">Administration</h1>
+                            <p class="page-subtitle">Comptes, sessions, audit. Les coffres restent chiffrés : aucune donnée utilisateur n'est visible.</p>
+                        </div>
+                        <button id="admin-create-user" class="btn btn-primary" type="button">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Nouveau compte
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Cartes de synthèse -->
+                <div class="admin-stats">
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        </div>
+                        <div>
+                            <div class="admin-stat-label">Utilisateurs</div>
+                            <div class="admin-stat-value mono" id="admin-stat-users">0</div>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        </div>
+                        <div>
+                            <div class="admin-stat-label">Administrateurs</div>
+                            <div class="admin-stat-value mono" id="admin-stat-admins">0</div>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                        </div>
+                        <div>
+                            <div class="admin-stat-label">Actifs · 7 jours</div>
+                            <div class="admin-stat-value mono" id="admin-stat-active">0</div>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                        </div>
+                        <div>
+                            <div class="admin-stat-label">Sessions ouvertes</div>
+                            <div class="admin-stat-value mono" id="admin-stat-sessions">0</div>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon admin-stat-icon-warn" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                        </div>
+                        <div>
+                            <div class="admin-stat-label">Désactivés / verrouillés</div>
+                            <div class="admin-stat-value mono" id="admin-stat-inactive">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table utilisateurs -->
+                <div class="card" style="padding:0; overflow:hidden;">
+                    <div class="admin-table-head">
+                        <div>
+                            <h2 class="card-title" style="margin-bottom:4px;">Utilisateurs</h2>
+                            <p class="microcopy" style="margin:0;">Réinitialisez les mots de passe, changez les rôles, révoquez les sessions, désactivez ou supprimez les comptes.</p>
+                        </div>
+                        <input type="text" id="admin-users-search" class="form-control form-control-sm" placeholder="Rechercher un compte…" style="max-width:220px;">
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Compte</th>
+                                    <th>Rôle</th>
+                                    <th>État</th>
+                                    <th>Dernière connexion</th>
+                                    <th>Données</th>
+                                    <th>Sessions</th>
+                                    <th style="text-align:right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-users-tbody">
+                                <tr><td colspan="7" class="admin-empty">Chargement…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid grid-2" style="margin-top:24px;">
+                    <!-- Politique d'inscription -->
+                    <div class="card">
+                        <h2 class="card-title">Politique d'inscription</h2>
+                        <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;gap:14px;">
+                            <div>
+                                <strong style="font-size:14px;display:block;margin-bottom:4px;">Inscriptions publiques ouvertes</strong>
+                                <span style="font-size:12px;color:var(--color-text-muted);">Si désactivé, seuls les administrateurs peuvent créer des comptes. La migration d'anciens comptes nécessite des inscriptions ouvertes.</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="admin-open-signup">
+                                <span class="switch-track" aria-hidden="true"></span>
+                            </label>
+                        </div>
+                        <p id="admin-settings-status" class="admin-form-status" aria-live="polite"></p>
+                        <h3 class="account-section-title" style="margin-top:18px;">Modèle zéro-connaissance</h3>
+                        <p class="prose" style="font-size:13px;">
+                            Le serveur ne stocke que des coffres <strong>déjà chiffrés</strong> (AES-GCM, clé enveloppée par mot de passe). Réinitialiser un mot de passe ne donne <strong>jamais</strong> accès aux données : seul le code de récupération de l'utilisateur (ou un export JSON) permet de retrouver son coffre.
+                        </p>
+                    </div>
+
+                    <!-- État du serveur -->
+                    <div class="card">
+                        <h2 class="card-title">État du serveur</h2>
+                        <div id="admin-server-health" class="health-list">
+                            <div class="health-row"><span>Chargement…</span><strong>-</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sessions actives -->
+                <div class="card" style="margin-top:24px; padding:0; overflow:hidden;">
+                    <div class="admin-table-head">
+                        <div>
+                            <h2 class="card-title" style="margin-bottom:4px;">Sessions actives</h2>
+                            <p class="microcopy" style="margin:0;">Toutes les sessions ouvertes sur le serveur, tous comptes confondus.</p>
+                        </div>
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Compte</th>
+                                    <th>Appareil</th>
+                                    <th>Activité</th>
+                                    <th style="text-align:right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-sessions-tbody">
+                                <tr><td colspan="4" class="admin-empty">Chargement…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Journal d'audit -->
+                <div class="card" style="margin-top:24px; padding:0; overflow:hidden;">
+                    <div class="admin-table-head">
+                        <div>
+                            <h2 class="card-title" style="margin-bottom:4px;">Journal d'audit</h2>
+                            <p class="microcopy" style="margin:0;">Connexions, échecs, créations, suppressions, réinitialisations : tout est tracé côté serveur.</p>
+                        </div>
+                        <div class="admin-audit-controls">
+                            <select id="admin-audit-filter" class="form-control form-control-sm" aria-label="Filtrer par type d'événement">
+                                <option value="">Tous les événements</option>
+                                <option value="login">Connexions</option>
+                                <option value="logout">Déconnexions</option>
+                                <option value="user">Comptes</option>
+                                <option value="password">Mots de passe</option>
+                                <option value="session">Sessions</option>
+                                <option value="vault">Coffres</option>
+                                <option value="recovery">Récupérations</option>
+                                <option value="settings">Réglages</option>
+                            </select>
+                            <input type="text" id="admin-audit-search" class="form-control form-control-sm" placeholder="Filtrer…" style="max-width:160px;">
+                            <button id="admin-audit-refresh" class="btn btn-secondary btn-sm" type="button" title="Rafraîchir">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Horodatage</th>
+                                    <th>Acteur</th>
+                                    <th>Action</th>
+                                    <th>Cible</th>
+                                    <th>Détails</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-audit-tbody">
+                                <tr><td colspan="5" class="admin-empty">Chargement…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="admin-table-foot">
+                        <button id="admin-audit-more" class="btn btn-secondary btn-sm" type="button" style="display:none;">Charger plus d'entrées</button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODALE CRÉATION DE COMPTE (admin) -->
+    <div id="admin-create-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="admin-create-title">
+        <div class="modal-content" style="max-width: 560px;">
+            <button class="close-btn" id="admin-create-close" aria-label="Fermer">&times;</button>
+            <h2 id="admin-create-title" style="font-size:22px;margin-bottom:6px;">Créer un compte</h2>
+            <p style="color: var(--color-text-muted); font-size:13px; margin-bottom:18px;">Le nouveau compte recevra son propre coffre chiffré indépendant.</p>
+            <form id="admin-create-form" autocomplete="off">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="admin-new-username" class="form-label">Identifiant</label>
+                        <input id="admin-new-username" type="text" class="form-control" placeholder="2-32 caractères" required pattern="[-a-z0-9_]{2,32}" autocapitalize="off" spellcheck="false">
+                    </div>
+                    <div class="form-group">
+                        <label for="admin-new-display" class="form-label">Nom affiché</label>
+                        <input id="admin-new-display" type="text" class="form-control" placeholder="Nom visible">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="admin-new-role" class="form-label">Rôle</label>
+                    <select id="admin-new-role">
+                        <option value="user">Utilisateur</option>
+                        <option value="admin">Administrateur</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="admin-new-password" class="form-label">
+                        <span>Mot de passe initial (temporaire)</span>
+                        <button type="button" class="auth-pwd-helper" data-act="gen-pwd" data-target="admin-new-password">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                            Régénérer
+                        </button>
+                    </label>
+                    <input id="admin-new-password" type="text" class="form-control mono" required minlength="8" placeholder="8 caractères minimum">
+                    <p class="microcopy" style="margin:8px 0 0;">L'utilisateur devra définir son propre mot de passe à sa première connexion.</p>
+                </div>
+                <p id="admin-create-status" class="admin-form-status" aria-live="polite"></p>
+                <button type="submit" class="btn btn-primary btn-block">Créer le compte</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODALE KIT DE RÉCUPÉRATION (affiché une seule fois) -->
+    <div id="recovery-kit-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="kit-title">
+        <div class="modal-content" style="max-width: 540px;">
+            <div class="kit-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+            </div>
+            <h2 id="kit-title" style="font-size:22px;margin-bottom:6px;">Votre code de récupération</h2>
+            <p id="kit-subtitle" style="color: var(--color-text-muted); font-size:13px; line-height:1.55; margin-bottom:18px;">
+                Ce code permet de récupérer votre compte et vos données si vous oubliez votre mot de passe. Il ne sera plus jamais affiché.
+            </p>
+            <div id="kit-code" class="kit-code mono" aria-label="Code de récupération">····-····-····</div>
+            <div class="kit-actions">
+                <button id="kit-copy" type="button" class="btn btn-secondary">Copier</button>
+                <button id="kit-download" type="button" class="btn btn-secondary">Télécharger (.txt)</button>
+            </div>
+            <label class="kit-confirm-row">
+                <input type="checkbox" id="kit-confirm">
+                <span>J'ai enregistré ce code dans un endroit sûr, hors de ce navigateur.</span>
+            </label>
+            <button id="kit-done" type="button" class="btn btn-primary btn-block" disabled>Continuer</button>
+        </div>
+    </div>
+
+    <!-- MODALE CHANGEMENT DE MOT DE PASSE OBLIGATOIRE -->
+    <div id="pwgate-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="pwgate-title">
+        <div class="modal-content" style="max-width: 540px;">
+            <h2 id="pwgate-title" style="font-size:22px;margin-bottom:6px;">Définir un nouveau mot de passe</h2>
+            <p id="pwgate-intro" style="color: var(--color-text-muted); font-size:13px; line-height:1.55; margin-bottom:18px;">
+                Pour des raisons de sécurité, vous devez définir un nouveau mot de passe avant de continuer.
+            </p>
+            <form id="pwgate-form" autocomplete="off">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="pwgate-new" class="form-label">Nouveau mot de passe</label>
+                        <input id="pwgate-new" type="password" class="form-control" autocomplete="new-password" minlength="8" required placeholder="8 caractères minimum">
+                    </div>
+                    <div class="form-group">
+                        <label for="pwgate-confirm" class="form-label">Confirmer</label>
+                        <input id="pwgate-confirm" type="password" class="form-control" autocomplete="new-password" minlength="8" required>
+                    </div>
+                </div>
+                <div id="pwgate-vault" class="pwgate-vault" style="display:none;">
+                    <p class="pwgate-vault-title">Vos données chiffrées</p>
+                    <label class="pwgate-option">
+                        <input type="radio" name="pwgate-mode" value="restore" checked>
+                        <span><strong>Restaurer avec mon code de récupération</strong><br>Vos sessions, inventaire et fiches seront conservés.</span>
+                    </label>
+                    <div class="form-group" id="pwgate-code-group" style="margin:10px 0 14px 26px;">
+                        <input id="pwgate-code" type="text" class="form-control mono" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" spellcheck="false" autocapitalize="characters" autocomplete="off">
+                    </div>
+                    <label class="pwgate-option">
+                        <input type="radio" name="pwgate-mode" value="fresh">
+                        <span><strong>Repartir avec un coffre vide</strong><br>Sans code de récupération, les anciennes données chiffrées sont définitivement illisibles.</span>
+                    </label>
+                </div>
+                <p id="pwgate-error" class="auth-error visible" role="alert" style="opacity:1;"></p>
+                <button id="pwgate-submit" type="submit" class="btn btn-primary btn-block auth-submit">
+                    <span class="auth-submit-label">Enregistrer et continuer</span>
+                    <span class="auth-submit-spinner" aria-hidden="true"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DÉTAILS SUBSTANCE (Pour le Guide substances) -->
+    <div id="substance-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-sub-title">
+        <div class="modal-content">
+            <button class="close-btn" id="btn-close-modal" aria-label="Fermer la fiche substance">&times;</button>
+            <div class="substance-modal-head">
+                <span class="substance-badge" id="modal-sub-badge"></span>
+                <h2 id="modal-sub-title" class="substance-modal-title"></h2>
+            </div>
+            <p id="modal-sub-description" style="color: var(--color-text-muted); line-height: 1.6; margin-bottom: 14px; font-size: 14px;">
+                Description...
+            </p>
+
+            <div id="modal-sub-meta" class="substance-meta-grid">
+                <!-- Rempli en JS -->
+            </div>
+
+            <div id="modal-sub-profile" class="substance-profile-callout">
+                <!-- Rempli en JS -->
+            </div>
+
+            <div id="modal-sub-quantitative-grid" class="grid grid-2">
+                <div>
+                    <h3 class="guide-section-title">Paliers indicatifs</h3>
+                    <table class="dosage-table">
+                        <tbody id="modal-sub-dosages-table">
+                            <!-- Rempli en JS -->
+                        </tbody>
+                    </table>
+                    <p style="font-size: 11px; color: var(--color-text-muted);" id="modal-sub-dosage-unit-info">
+                        * Repères indicatifs : la tolérance, la pureté, la voie et le contexte peuvent tout changer.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="guide-section-title">Chronologie estimative</h3>
+                    <table class="dosage-table">
+                        <tbody id="modal-sub-durations-table">
+                            <!-- Rempli en JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="modal-sub-bioavailability-section">
+                <h3 class="guide-section-title">Bio-disponibilité estimée</h3>
+                <table class="dosage-table">
+                    <tbody id="modal-sub-bioavailability-table">
+                        <!-- Rempli en JS -->
+                    </tbody>
+                </table>
+                <p style="font-size: 11px; color: var(--color-text-muted);">
+                    * Part approximative atteignant la circulation systémique. Ce n'est pas un outil de conversion de dose.
+                </p>
+            </div>
+
+            <div id="modal-sub-expanded-sections" class="substance-detail-sections">
+                <!-- Rempli en JS -->
+            </div>
+
+            <div>
+                <h3 class="guide-section-title">Règles prioritaires de réduction des risques</h3>
+                <ul id="modal-sub-rules-list" style="padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--color-text-muted); line-height: 1.5;">
+                    <!-- Rempli en JS -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chargement des Scripts -->
+    <script src="db.js?v=13"></script>
+    <script src="substances-data.js?v=4"></script>
+    <script src="psychonaut-data.js?v=4"></script>
+    <script src="index-substances.js?v=8"></script>
+    <script src="route-model.js?v=15"></script>
+    <script src="ui.js?v=3"></script>
+    <script src="auth.js?v=19"></script>
+    <script src="app.js?v=99"></script>
+</body>
+</html>
