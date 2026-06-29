@@ -43,7 +43,7 @@ OPENROUTER_API_URL = os.environ.get("OPENROUTER_API_URL", "https://openrouter.ai
 OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "nvidia/nemotron-3-ultra-550b-a55b:free")
 OPENROUTER_KEY_FILE = ROOT / "instance" / "openrouter_api_key"
 AI_MAX_PROMPT_CHARS = int(os.environ.get("SEUIL_AI_MAX_PROMPT_CHARS", "3000"))
-AI_MAX_OUTPUT_TOKENS = int(os.environ.get("SEUIL_AI_MAX_OUTPUT_TOKENS", "700"))
+AI_MAX_OUTPUT_TOKENS = int(os.environ.get("SEUIL_AI_MAX_OUTPUT_TOKENS", "1200"))
 AI_TIMEOUT_SECONDS = float(os.environ.get("SEUIL_AI_TIMEOUT_SECONDS", "25"))
 
 STATE_DB_PATH = ROOT / "instance" / "seuil_state.sqlite3"

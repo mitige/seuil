@@ -4,6 +4,13 @@
 
     const $ = (id) => document.getElementById(id);
     const PROMPT_LIMIT = 2900;
+    const RESPONSE_STYLE_GUIDE = [
+        "Answer with enough detail to be genuinely useful: aim for 5 to 8 short paragraphs or bullet groups.",
+        "Use a calm educational structure: quick reading, context interpretation, what the data suggests, practical next steps, and limits.",
+        "Include one measured vigilance section for warning signs or when to seek help.",
+        "Do not let emergency or danger language dominate the answer unless the supplied context clearly indicates immediate danger.",
+        "Avoid repeating generic disclaimers; make the explanation specific to the session, trend, curve, or combination."
+    ].join("\n");
 
     function aiText(key, vars) {
         if (typeof window.t === "function") return window.t(key, vars);
@@ -70,13 +77,26 @@
         return [
             "You are Seuil's discreet harm-reduction assistant.",
             `Answer in ${currentLanguageName()}.`,
-            "Be concise, practical, nonjudgmental, and clear about uncertainty.",
+            "Be explanatory, practical, nonjudgmental, and clear about uncertainty.",
             "Never present psychoactive use as safe. Do not optimize intoxication.",
             "Do not give injection instructions, synthesis, sourcing, trafficking, or evasion advice.",
-            "For emergency signs, tell the user to call local emergency services immediately.",
+            RESPONSE_STYLE_GUIDE,
             "",
             `Task: ${title}`
         ].join("\n");
+    }
+
+    function contextualReturnInstruction(kind) {
+        const shared = "Return a complete but sober analysis with concrete, user-facing explanations. Keep the tone calm. Include only one short vigilance/help section unless the context itself is clearly urgent.";
+        const byKind = {
+            "active-session": "Cover phase/timing, dose context, route-specific notes, what the log suggests, redose caution, what to observe now, and a short recovery/next-step plan.",
+            "pre-session": "Cover what is known from the entered plan, dose/route/timeline context, recent-history relevance, what to verify before starting, and safer alternatives such as delaying, lowering uncertainty, or not continuing.",
+            "comparison": "Explain curve differences in onset, peak, total duration, overlap, fatigue burden, and why the curves are educational estimates rather than compatibility advice.",
+            "interaction": "Explain the likely interaction pattern, why the pairing can be unpredictable, what would make it more concerning, and practical non-technical ways to reduce uncertainty without instructing use.",
+            "trends": "Explain spacing, repetition, dose/unit patterns, route patterns, context patterns, possible tolerance/escalation signals, and 3 to 5 realistic adjustments for the next weeks.",
+            "debrief": "Explain what the session log suggests, what went well, what could be improved, recovery priorities, and one or two safeguards for the next comparable situation."
+        };
+        return `${shared} ${byKind[kind] || ""}`;
     }
 
     function substanceBlock(summary, route) {
@@ -118,7 +138,7 @@
             formatLogLines(session, 8),
             "Reference card:",
             substanceBlock(summary, session.route),
-            "Return: current risk level, redose caution, concrete signs to watch, and recovery/next-step advice."
+            `Return: ${contextualReturnInstruction("active-session")}`
         ]);
     }
 
@@ -143,7 +163,7 @@
             recent,
             "Reference card:",
             substanceBlock(summary, route),
-            "Return: whether the entered plan contains obvious risk flags, what to slow down/check, and when professional or emergency help is relevant."
+            `Return: ${contextualReturnInstruction("pre-session")}`
         ]);
     }
 
@@ -159,7 +179,7 @@
         return buildPrompt("Compare selected effect curves for educational harm-reduction context.", [
             "Selected cards:",
             cards,
-            "Return: differences in onset, peak, total duration, redose traps, fatigue/recovery burden, and clear reminder not to treat overlap as safe."
+            `Return: ${contextualReturnInstruction("comparison")}`
         ]);
     }
 
@@ -177,7 +197,7 @@
             substanceBlock(s2, s2 && s2.routes ? s2.routes[0] : ""),
             "Seuil interaction result:",
             `${title || "not calculated"} - ${note || "no displayed note"}`,
-            "Return: main mechanisms/risks, danger signs, what to avoid, and when to seek urgent help. Do not give instructions to perform the combination."
+            `Return: ${contextualReturnInstruction("interaction")}`
         ]);
     }
 
@@ -188,7 +208,7 @@
         return buildPrompt("Read recent tracking trends and highlight harm-reduction signals.", [
             `Closed sessions reviewed: ${sessions.length}`,
             lines,
-            "Return: spacing, repetition, escalation, risky proximity, recovery burden, and 2-4 practical changes. Avoid moralizing."
+            `Return: ${contextualReturnInstruction("trends")}`
         ]);
     }
 
@@ -204,7 +224,7 @@
             formatLogLines(session, 10),
             "Reference card:",
             substanceBlock(summary, session.route),
-            "Return: what went well from a safety perspective, warning points, recovery advice, and next-session safeguards."
+            `Return: ${contextualReturnInstruction("debrief")}`
         ]);
     }
 

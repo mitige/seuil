@@ -209,7 +209,7 @@ Variables serveur utiles :
 | `SEUIL_MAX_STATE_VAULTS` | `200` | Nombre maximal de coffres stockés. |
 | `OPENROUTER_API_KEY` | non défini | Active l'assistant IA optionnel côté serveur. |
 | `SEUIL_AI_MAX_PROMPT_CHARS` | `3000` | Taille maximale du prompt accepté par `/api/ai/analyze`. |
-| `SEUIL_AI_MAX_OUTPUT_TOKENS` | `700` | Taille maximale de réponse demandée à OpenRouter. |
+| `SEUIL_AI_MAX_OUTPUT_TOKENS` | `1200` | Taille maximale de réponse demandée à OpenRouter. |
 
 ---
 

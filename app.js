@@ -934,7 +934,7 @@ function registerServiceWorker() {
         window.location.reload();
     });
     window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js?v=2.3.110")
+        navigator.serviceWorker.register("./sw.js?v=2.3.111")
             .then((reg) => {
                 // Tenter d'attraper une mise à jour en cours
                 if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });

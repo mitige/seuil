@@ -197,7 +197,7 @@ Useful server environment variables:
 | `SEUIL_MAX_STATE_VAULTS` | `200` | Maximum number of stored vault rows. |
 | `OPENROUTER_API_KEY` | unset | Enables the optional AI assistant when configured server-side. |
 | `SEUIL_AI_MAX_PROMPT_CHARS` | `3000` | Maximum prompt size accepted by `/api/ai/analyze`. |
-| `SEUIL_AI_MAX_OUTPUT_TOKENS` | `700` | Maximum AI response size requested from OpenRouter. |
+| `SEUIL_AI_MAX_OUTPUT_TOKENS` | `1200` | Maximum AI response size requested from OpenRouter. |
 
 ---
 
