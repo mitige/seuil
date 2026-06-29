@@ -760,8 +760,8 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     bottom: 22px;
     z-index: 1200;
     width: min(460px, calc(100vw - 32px));
-    max-height: min(70vh, 640px);
-    overflow: auto;
+    max-height: min(82vh, 760px);
+    overflow-y: auto;
     padding: 18px;
     border: 1px solid rgba(148, 163, 184, 0.24);
     border-radius: var(--radius-lg);
@@ -788,8 +788,8 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     margin: 10px 0 0;
 }
 .ai-context-panel .ai-assistant-result {
-    max-height: 46vh;
-    overflow: auto;
+    max-height: none;
+    overflow: visible;
 }
 .ai-context-panel.is-loading .ai-assistant-result {
     color: var(--color-text-muted);
@@ -1022,12 +1022,9 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     .ai-context-panel {
         inset: auto 10px calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 10px) 10px;
         width: auto;
-        max-height: min(62vh, 520px);
+        max-height: calc(100dvh - var(--mobile-nav-height) - env(safe-area-inset-bottom) - 22px);
         padding: 15px;
         border-radius: 14px;
-    }
-    .ai-context-panel .ai-assistant-result {
-        max-height: 38vh;
     }
     .nav-item.active button {
         box-shadow: inset 0 0 0 1px rgba(110, 139, 255, 0.22);

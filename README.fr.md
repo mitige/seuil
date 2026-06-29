@@ -212,7 +212,9 @@ Variables serveur utiles :
 | `SEUIL_OPENCODE_MODEL` | `opencode/gpt-5.1-codex` | Modèle OpenCode utilisé par le fournisseur de secours. |
 | `SEUIL_OPENCODE_ASSUME_CONFIGURED` | non défini | À mettre à `1` uniquement si les identifiants OpenCode sont fournis par l'environnement ou un mécanisme hors `~/.local/share/opencode/auth.json`. |
 | `SEUIL_AI_MAX_PROMPT_CHARS` | `3000` | Taille maximale du prompt accepté par `/api/ai/analyze`. |
-| `SEUIL_AI_MAX_OUTPUT_TOKENS` | `1200` | Taille maximale de réponse demandée à OpenRouter. |
+| `SEUIL_AI_MAX_OUTPUT_TOKENS` | `2400` | Taille maximale de réponse demandée à OpenRouter pour chaque passe de génération. |
+| `SEUIL_AI_MAX_CONTINUATION_ROUNDS` | `2` | Appels de continuation supplémentaires si le fournisseur indique que la réponse s'est arrêtée à cause de la limite de tokens. |
+| `SEUIL_AI_TIMEOUT_SECONDS` | `110` | Délai maximal d'appel OpenRouter, cohérent avec l'indication de l'interface jusqu'à environ deux minutes. |
 
 ---
 

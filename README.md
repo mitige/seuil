@@ -200,7 +200,9 @@ Useful server environment variables:
 | `SEUIL_OPENCODE_MODEL` | `opencode/gpt-5.1-codex` | OpenCode model used by the fallback provider. |
 | `SEUIL_OPENCODE_ASSUME_CONFIGURED` | unset | Set to `1` only when OpenCode credentials are provided by environment or another mechanism outside `~/.local/share/opencode/auth.json`. |
 | `SEUIL_AI_MAX_PROMPT_CHARS` | `3000` | Maximum prompt size accepted by `/api/ai/analyze`. |
-| `SEUIL_AI_MAX_OUTPUT_TOKENS` | `1200` | Maximum AI response size requested from OpenRouter. |
+| `SEUIL_AI_MAX_OUTPUT_TOKENS` | `2400` | Maximum AI response size requested from OpenRouter for each generation pass. |
+| `SEUIL_AI_MAX_CONTINUATION_ROUNDS` | `2` | Extra continuation calls when the provider reports that an answer stopped because of the token limit. |
+| `SEUIL_AI_TIMEOUT_SECONDS` | `110` | OpenRouter request timeout, aligned with the UI note that answers can take up to about two minutes. |
 
 ---
 

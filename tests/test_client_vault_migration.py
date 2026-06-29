@@ -294,8 +294,8 @@ def test_sober_contextual_ai_controls_are_rendered_without_legacy_bridge_ui():
     assert 'id="ai-assistant-card"' in index_html
     assert 'src="ai.js?v=10"' in index_html
     assert "./ai.js?v=10" in sw_js
-    assert 'src="app.js?v=106"' in index_html
-    assert "./app.js?v=106" in sw_js
+    assert 'src="app.js?v=107"' in index_html
+    assert "./app.js?v=107" in sw_js
     assert "/api/ai/analyze" in ai_js
     assert "X-Seuil-Csrf" in ai_js
     assert "function callAi(prompt)" in ai_js
@@ -332,7 +332,15 @@ def test_contextual_ai_prompts_request_detailed_balanced_answers():
     assert "function contextualReturnInstruction(kind)" in ai_js
     for kind in ["active-session", "pre-session", "comparison", "interaction", "trends", "debrief"]:
         assert f'contextualReturnInstruction("{kind}")' in ai_js
-    assert 'AI_MAX_OUTPUT_TOKENS = int(os.environ.get("SEUIL_AI_MAX_OUTPUT_TOKENS", "1200"))' in serve_py
+    assert 'AI_MAX_OUTPUT_TOKENS = int(os.environ.get("SEUIL_AI_MAX_OUTPUT_TOKENS", "2400"))' in serve_py
+    assert 'AI_MAX_CONTINUATION_ROUNDS = int(os.environ.get("SEUIL_AI_MAX_CONTINUATION_ROUNDS", "2"))' in serve_py
+
+
+def test_contextual_ai_panel_does_not_clip_long_answers():
+    styles_css = read("styles.css")
+
+    assert ".ai-context-panel .ai-assistant-result {\n    max-height: none;\n    overflow: visible;\n}" in styles_css
+    assert "max-height: calc(100dvh - var(--mobile-nav-height) - env(safe-area-inset-bottom) - 22px);" in styles_css
 
 
 def test_mobile_navigation_keeps_all_primary_icons_visible():

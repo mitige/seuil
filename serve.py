@@ -49,8 +49,9 @@ OPENCODE_MODEL = os.environ.get("SEUIL_OPENCODE_MODEL", "opencode/gpt-5.1-codex"
 OPENCODE_DISPLAY_MODEL = os.environ.get("SEUIL_OPENCODE_DISPLAY_MODEL", OPENCODE_MODEL)
 OPENCODE_AUTH_PATH = os.environ.get("OPENCODE_AUTH_PATH", "").strip()
 AI_MAX_PROMPT_CHARS = int(os.environ.get("SEUIL_AI_MAX_PROMPT_CHARS", "3000"))
-AI_MAX_OUTPUT_TOKENS = int(os.environ.get("SEUIL_AI_MAX_OUTPUT_TOKENS", "1200"))
-AI_TIMEOUT_SECONDS = float(os.environ.get("SEUIL_AI_TIMEOUT_SECONDS", "25"))
+AI_MAX_OUTPUT_TOKENS = int(os.environ.get("SEUIL_AI_MAX_OUTPUT_TOKENS", "2400"))
+AI_MAX_CONTINUATION_ROUNDS = int(os.environ.get("SEUIL_AI_MAX_CONTINUATION_ROUNDS", "2"))
+AI_TIMEOUT_SECONDS = float(os.environ.get("SEUIL_AI_TIMEOUT_SECONDS", "110"))
 OPENCODE_TIMEOUT_SECONDS = float(os.environ.get("SEUIL_OPENCODE_TIMEOUT_SECONDS", "45"))
 
 STATE_DB_PATH = ROOT / "instance" / "seuil_state.sqlite3"
@@ -321,17 +322,16 @@ def read_openrouter_api_key():
         return ""
 
 
-def call_openrouter_chat(prompt):
-    key = read_openrouter_api_key()
-    if not key:
-        raise RuntimeError("Assistant IA non configuré.")
+OPENROUTER_CONTINUATION_PROMPT = (
+    "Continue exactly where you stopped. Do not restart, summarize, or add a new introduction. "
+    "Complete the previous answer in the same language and keep the same structure."
+)
 
+
+def post_openrouter_chat(key, messages):
     payload = {
         "model": OPENROUTER_MODEL,
-        "messages": [
-            {"role": "system", "content": AI_SYSTEM_PROMPT},
-            {"role": "user", "content": str(prompt or "")[:AI_MAX_PROMPT_CHARS]},
-        ],
+        "messages": messages,
         "temperature": 0.2,
         "max_tokens": AI_MAX_OUTPUT_TOKENS,
     }
@@ -360,13 +360,38 @@ def call_openrouter_chat(prompt):
 
     try:
         data = json.loads(raw.decode("utf-8"))
-        output = data["choices"][0]["message"]["content"]
+        choice = data["choices"][0]
+        output = choice["message"]["content"]
+        finish_reason = str(choice.get("finish_reason") or "")
     except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
         raise RuntimeError("Réponse IA invalide.") from exc
     output = str(output or "").strip()
     if not output:
         raise RuntimeError("Réponse IA vide.")
-    return output
+    return output, finish_reason
+
+
+def call_openrouter_chat(prompt):
+    key = read_openrouter_api_key()
+    if not key:
+        raise RuntimeError("Assistant IA non configuré.")
+
+    messages = [
+        {"role": "system", "content": AI_SYSTEM_PROMPT},
+        {"role": "user", "content": str(prompt or "")[:AI_MAX_PROMPT_CHARS]},
+    ]
+    parts = []
+    continuation_rounds = max(0, AI_MAX_CONTINUATION_ROUNDS)
+    for round_index in range(continuation_rounds + 1):
+        output, finish_reason = post_openrouter_chat(key, messages)
+        parts.append(output)
+        if finish_reason != "length" or round_index >= continuation_rounds:
+            break
+        messages.extend([
+            {"role": "assistant", "content": output},
+            {"role": "user", "content": OPENROUTER_CONTINUATION_PROMPT},
+        ])
+    return "\n".join(part.strip() for part in parts if part.strip())
 
 
 def resolve_opencode_cmd():

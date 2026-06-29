@@ -90,6 +90,47 @@ class AiOpenRouterTests(unittest.TestCase):
         self.assertEqual(statuses[-1], 429)
         self.assertEqual(statuses.count(429), 1)
 
+    @mock.patch.object(serve, "read_openrouter_api_key", return_value="test-secret")
+    def test_openrouter_continues_when_provider_stops_for_length(self, _key):
+        class FakeResponse:
+            def __init__(self, payload):
+                self.payload = payload
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self, _limit):
+                return json.dumps(self.payload).encode("utf-8")
+
+        calls = []
+        responses = [
+            {
+                "choices": [
+                    {"message": {"content": "Première partie interrompue"}, "finish_reason": "length"}
+                ]
+            },
+            {
+                "choices": [
+                    {"message": {"content": " suite complète."}, "finish_reason": "stop"}
+                ]
+            },
+        ]
+
+        def fake_urlopen(req, timeout):
+            calls.append(json.loads(req.data.decode("utf-8")))
+            return FakeResponse(responses.pop(0))
+
+        with mock.patch.object(serve.urllib.request, "urlopen", side_effect=fake_urlopen):
+            output = serve.call_openrouter_chat("Analyse une session longue.")
+
+        self.assertEqual(output, "Première partie interrompue\nsuite complète.")
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[1]["messages"][-2]["role"], "assistant")
+        self.assertIn("Continue exactly where you stopped", calls[1]["messages"][-1]["content"])
+
     @mock.patch.object(serve, "opencode_zen_available", return_value=True)
     @mock.patch.object(serve, "call_opencode_zen_chat", return_value="Réponse zen.")
     @mock.patch.object(serve, "call_openrouter_chat", side_effect=RuntimeError("OpenRouter quota atteint."))
