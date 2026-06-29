@@ -292,13 +292,18 @@ def test_sober_contextual_ai_controls_are_rendered_without_legacy_bridge_ui():
     for fragment in hidden_fragments:
         assert fragment not in index_html
     assert 'id="ai-assistant-card"' in index_html
-    assert 'src="ai.js?v=10"' in index_html
-    assert "./ai.js?v=10" in sw_js
+    assert 'src="ai.js?v=11"' in index_html
+    assert "./ai.js?v=11" in sw_js
     assert 'src="app.js?v=107"' in index_html
     assert "./app.js?v=107" in sw_js
     assert "/api/ai/analyze" in ai_js
+    assert "/api/ai/cancel" in ai_js
     assert "X-Seuil-Csrf" in ai_js
-    assert "function callAi(prompt)" in ai_js
+    assert "function callAi(prompt, request)" in ai_js
+    assert "function cancelAiRequest(request)" in ai_js
+    assert "AbortController" in ai_js
+    assert "keepalive: true" in ai_js
+    assert "cancelAiRequest(activeAiRequest);" in ai_js
     assert "function promptSessionAnalysis()" in ai_js
     assert "function promptPreSession()" in ai_js
     assert "function promptComparison()" in ai_js
@@ -310,6 +315,8 @@ def test_sober_contextual_ai_controls_are_rendered_without_legacy_bridge_ui():
     assert "OPENROUTER_API_KEY" in serve_py
     assert "nvidia/nemotron-3-ultra-550b-a55b:free" in serve_py
     assert "sk-or-v1" not in index_html + sw_js + ai_js + serve_py
+    assert "opencode run" not in serve_py
+    assert "subprocess.run" not in serve_py
 
 
 def test_contextual_ai_prompts_request_detailed_balanced_answers():

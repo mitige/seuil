@@ -4,6 +4,7 @@
 
     const $ = (id) => document.getElementById(id);
     const PROMPT_LIMIT = 2900;
+    let activeAiRequest = null;
     const RESPONSE_STYLE_GUIDE = [
         "Answer with enough detail to be genuinely useful: aim for 5 to 8 short paragraphs or bullet groups.",
         "Use a calm educational structure: quick reading, context interpretation, what the data suggests, practical next steps, and limits.",
@@ -117,6 +118,56 @@
         return clampText([promptHeader(title), ...sections].join("\n\n"), PROMPT_LIMIT);
     }
 
+    function createRequestId() {
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+            return window.crypto.randomUUID().replace(/[^A-Za-z0-9_-]/g, "").slice(0, 48);
+        }
+        const random = Math.random().toString(36).slice(2);
+        return `ai${Date.now().toString(36)}${random}`.slice(0, 48);
+    }
+
+    function createAiRequest() {
+        return {
+            requestId: createRequestId(),
+            controller: typeof AbortController !== "undefined" ? new AbortController() : null,
+            cancelled: false
+        };
+    }
+
+    function clearAiRequest(request) {
+        if (activeAiRequest === request) activeAiRequest = null;
+    }
+
+    function sendAiCancel(requestId) {
+        if (!requestId) return;
+        fetch("/api/ai/cancel", {
+            method: "POST",
+            credentials: "same-origin",
+            cache: "no-store",
+            keepalive: true,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "X-Seuil-Csrf": "1"
+            },
+            body: JSON.stringify({ requestId })
+        }).catch(() => {});
+    }
+
+    function cancelAiRequest(request) {
+        if (!request || request.cancelled) return;
+        request.cancelled = true;
+        if (request.controller) request.controller.abort();
+        sendAiCancel(request.requestId);
+        clearAiRequest(request);
+    }
+
+    function startAiRequest() {
+        cancelAiRequest(activeAiRequest);
+        activeAiRequest = createAiRequest();
+        return activeAiRequest;
+    }
+
     function promptSessionAnalysis() {
         const snapshot = getSnapshot();
         const session = snapshot.activeSession;
@@ -221,17 +272,19 @@
         ]);
     }
 
-    async function callAi(prompt) {
+    async function callAi(prompt, request) {
+        const aiRequest = request || createAiRequest();
         const response = await fetch("/api/ai/analyze", {
             method: "POST",
             credentials: "same-origin",
             cache: "no-store",
+            signal: aiRequest.controller ? aiRequest.controller.signal : undefined,
             headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
                 "X-Seuil-Csrf": "1"
             },
-            body: JSON.stringify({ prompt })
+            body: JSON.stringify({ prompt, requestId: aiRequest.requestId })
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload.ok) {
@@ -284,6 +337,7 @@
     }
 
     function closeContextPanel() {
+        cancelAiRequest(activeAiRequest);
         const panel = $("ai-context-panel");
         if (panel) panel.hidden = true;
     }
@@ -294,12 +348,17 @@
             openContextPanel(title, subtitle, aiText(missingMessage || "Pas assez d'informations à analyser."), false);
             return;
         }
+        const aiRequest = startAiRequest();
         openContextPanel(title, subtitle, aiText("Réponse en cours..."), true);
         try {
-            const output = await callAi(prompt);
+            const output = await callAi(prompt, aiRequest);
+            if (aiRequest.cancelled || activeAiRequest !== aiRequest) return;
             openContextPanel(title, subtitle, output || aiText("Réponse IA vide."), false);
         } catch (err) {
+            if (aiRequest.cancelled || (err && err.name === "AbortError")) return;
             openContextPanel(title, subtitle, err && err.message ? err.message : aiText("Assistant indisponible."), false);
+        } finally {
+            clearAiRequest(aiRequest);
         }
     }
 
@@ -336,16 +395,20 @@
             question
         ]);
 
+        const aiRequest = startAiRequest();
         setLoading(true);
         setStatus("Réponse en cours...");
         try {
-            const output = await callAi(prompt);
+            const output = await callAi(prompt, aiRequest);
+            if (aiRequest.cancelled || activeAiRequest !== aiRequest) return;
             showResult(output || "");
             setStatus("Réponse générée.");
         } catch (err) {
+            if (aiRequest.cancelled || (err && err.name === "AbortError")) return;
             setStatus(err && err.message ? err.message : "Assistant indisponible.", "error");
         } finally {
-            setLoading(false);
+            clearAiRequest(aiRequest);
+            if (!activeAiRequest) setLoading(false);
         }
     }
 
@@ -375,6 +438,7 @@
         aiText,
         refreshStatus,
         callAi,
+        cancelAiRequest,
         promptSessionAnalysis,
         promptPreSession,
         promptComparison,

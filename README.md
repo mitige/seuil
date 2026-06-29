@@ -109,6 +109,8 @@ The app is primarily in **French** with built-in **English** translations.
   curve comparison, selected combination, recent trends or last closed session.
 - The frontend never contains the OpenRouter API key; requests go through
   `/api/ai/analyze` with CSRF protection, authentication and rate limiting.
+- The assistant is text-only: user prompts are never passed to a local agent CLI,
+  shell command, file editor or server-side tool runner.
 - AI output is treated as an educational aid only. It can be wrong and never
   replaces medical care, emergency services or drug checking.
 
@@ -196,9 +198,6 @@ Useful server environment variables:
 | `SEUIL_MAX_STATE_DB_BYTES` | `5 GiB` | Total SQLite storage quota for server state and encrypted vaults. |
 | `SEUIL_MAX_STATE_VAULTS` | `200` | Maximum number of stored vault rows. |
 | `OPENROUTER_API_KEY` | unset | Enables the optional AI assistant when configured server-side. |
-| `SEUIL_OPENCODE_CMD` | auto | Optional fallback CLI command used when OpenRouter is unavailable or exhausted; auto-detects `opencode` in `PATH`, then `~/.opencode/bin/opencode`. |
-| `SEUIL_OPENCODE_MODEL` | `opencode/gpt-5.1-codex` | OpenCode model used by the fallback provider. |
-| `SEUIL_OPENCODE_ASSUME_CONFIGURED` | unset | Set to `1` only when OpenCode credentials are provided by environment or another mechanism outside `~/.local/share/opencode/auth.json`. |
 | `SEUIL_AI_MAX_PROMPT_CHARS` | `3000` | Maximum prompt size accepted by `/api/ai/analyze`. |
 | `SEUIL_AI_MAX_OUTPUT_TOKENS` | `2400` | Maximum AI response size requested from OpenRouter for each generation pass. |
 | `SEUIL_AI_MAX_CONTINUATION_ROUNDS` | `2` | Extra continuation calls when the provider reports that an answer stopped because of the token limit. |

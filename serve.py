@@ -22,10 +22,9 @@ import json
 import os
 import re
 import secrets
-import shutil
 import sqlite3
-import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -44,15 +43,10 @@ PORT = int(os.environ.get("PORT") or (sys.argv[1] if len(sys.argv) > 1 else 1234
 OPENROUTER_API_URL = os.environ.get("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
 OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "nvidia/nemotron-3-ultra-550b-a55b:free")
 OPENROUTER_KEY_FILE = ROOT / "instance" / "openrouter_api_key"
-OPENCODE_CMD = os.environ.get("SEUIL_OPENCODE_CMD", "").strip()
-OPENCODE_MODEL = os.environ.get("SEUIL_OPENCODE_MODEL", "opencode/gpt-5.1-codex")
-OPENCODE_DISPLAY_MODEL = os.environ.get("SEUIL_OPENCODE_DISPLAY_MODEL", OPENCODE_MODEL)
-OPENCODE_AUTH_PATH = os.environ.get("OPENCODE_AUTH_PATH", "").strip()
 AI_MAX_PROMPT_CHARS = int(os.environ.get("SEUIL_AI_MAX_PROMPT_CHARS", "3000"))
 AI_MAX_OUTPUT_TOKENS = int(os.environ.get("SEUIL_AI_MAX_OUTPUT_TOKENS", "2400"))
 AI_MAX_CONTINUATION_ROUNDS = int(os.environ.get("SEUIL_AI_MAX_CONTINUATION_ROUNDS", "2"))
 AI_TIMEOUT_SECONDS = float(os.environ.get("SEUIL_AI_TIMEOUT_SECONDS", "110"))
-OPENCODE_TIMEOUT_SECONDS = float(os.environ.get("SEUIL_OPENCODE_TIMEOUT_SECONDS", "45"))
 
 STATE_DB_PATH = ROOT / "instance" / "seuil_state.sqlite3"
 MAX_STATE_BLOB = 512 * 1024
@@ -81,6 +75,7 @@ B64_RE = re.compile(r"^[A-Za-z0-9+/=_-]{8,512}$")
 WRAPPED_KEY_RE = re.compile(r"^v1:[A-Za-z0-9+/=_-]{8,64}:[A-Za-z0-9+/=_-]{8,512}$")
 VAULT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{32,80}$")
 VAULT_KEY_RE = re.compile(r"^[A-Za-z0-9_-]{32,160}$")
+AI_REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,80}$")
 
 # Limites de débit par IP : { bucket: (max, fenêtre en secondes) }
 RATE_RULES = {
@@ -328,7 +323,17 @@ OPENROUTER_CONTINUATION_PROMPT = (
 )
 
 
-def post_openrouter_chat(key, messages):
+class AiRequestCancelled(RuntimeError):
+    pass
+
+
+def ensure_ai_not_cancelled(cancel_event):
+    if cancel_event is not None and cancel_event.is_set():
+        raise AiRequestCancelled("Requête IA annulée.")
+
+
+def post_openrouter_chat(key, messages, cancel_event=None):
+    ensure_ai_not_cancelled(cancel_event)
     payload = {
         "model": OPENROUTER_MODEL,
         "messages": messages,
@@ -368,10 +373,11 @@ def post_openrouter_chat(key, messages):
     output = str(output or "").strip()
     if not output:
         raise RuntimeError("Réponse IA vide.")
+    ensure_ai_not_cancelled(cancel_event)
     return output, finish_reason
 
 
-def call_openrouter_chat(prompt):
+def call_openrouter_chat(prompt, cancel_event=None):
     key = read_openrouter_api_key()
     if not key:
         raise RuntimeError("Assistant IA non configuré.")
@@ -383,7 +389,8 @@ def call_openrouter_chat(prompt):
     parts = []
     continuation_rounds = max(0, AI_MAX_CONTINUATION_ROUNDS)
     for round_index in range(continuation_rounds + 1):
-        output, finish_reason = post_openrouter_chat(key, messages)
+        ensure_ai_not_cancelled(cancel_event)
+        output, finish_reason = post_openrouter_chat(key, messages, cancel_event=cancel_event)
         parts.append(output)
         if finish_reason != "length" or round_index >= continuation_rounds:
             break
@@ -394,93 +401,12 @@ def call_openrouter_chat(prompt):
     return "\n".join(part.strip() for part in parts if part.strip())
 
 
-def resolve_opencode_cmd():
-    if OPENCODE_CMD:
-        if os.path.isabs(OPENCODE_CMD):
-            return OPENCODE_CMD if os.access(OPENCODE_CMD, os.X_OK) else ""
-        return shutil.which(OPENCODE_CMD) or ""
-    found = shutil.which("opencode")
-    if found:
-        return found
-    local_bin = Path.home() / ".opencode" / "bin" / "opencode"
-    if local_bin.exists() and os.access(local_bin, os.X_OK):
-        return str(local_bin)
-    return ""
-
-
-def opencode_auth_file():
-    if OPENCODE_AUTH_PATH:
-        return Path(OPENCODE_AUTH_PATH).expanduser()
-    return Path.home() / ".local" / "share" / "opencode" / "auth.json"
-
-
-def opencode_model_provider():
-    return OPENCODE_MODEL.split("/", 1)[0].strip()
-
-
-def opencode_zen_available():
-    if not resolve_opencode_cmd():
-        return False
-    if os.environ.get("SEUIL_OPENCODE_ASSUME_CONFIGURED") == "1":
-        return True
-    provider = opencode_model_provider()
-    if not provider:
-        return False
-    try:
-        credentials = json.loads(opencode_auth_file().read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return False
-    return bool(credentials.get(provider))
-
-
-def call_opencode_zen_chat(prompt):
-    cmd_path = resolve_opencode_cmd()
-    if not cmd_path or not opencode_zen_available():
-        raise RuntimeError("Assistant IA de secours indisponible.")
-    cmd = [
-        cmd_path,
-        "run",
-        "--model",
-        OPENCODE_MODEL,
-        str(prompt or "")[:AI_MAX_PROMPT_CHARS],
-    ]
-    try:
-        result = subprocess.run(
-            cmd,
-            cwd=str(ROOT),
-            text=True,
-            capture_output=True,
-            timeout=OPENCODE_TIMEOUT_SECONDS,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        raise RuntimeError("Assistant IA de secours indisponible.") from exc
-    if result.returncode != 0:
-        raise RuntimeError("Assistant IA de secours indisponible.")
-    output = str(result.stdout or "").strip()
-    if not output:
-        raise RuntimeError("Réponse IA vide.")
-    return output
-
-
-def analyze_with_ai(prompt):
-    try:
-        return {
-            "output": call_openrouter_chat(prompt),
-            "provider": "openrouter",
-            "model": OPENROUTER_MODEL,
-        }
-    except RuntimeError as openrouter_error:
-        if opencode_zen_available():
-            try:
-                return {
-                    "output": call_opencode_zen_chat(prompt),
-                    "provider": "opencode",
-                    "model": OPENCODE_DISPLAY_MODEL,
-                }
-            except RuntimeError:
-                pass
-        raise openrouter_error
+def analyze_with_ai(prompt, cancel_event=None):
+    return {
+        "output": call_openrouter_chat(prompt, cancel_event=cancel_event),
+        "provider": "openrouter",
+        "model": OPENROUTER_MODEL,
+    }
 
 
 # ============================================================
@@ -498,6 +424,7 @@ def create_app(state_db_path=None):
         MAX_STATE_DB_BYTES=MAX_STATE_DB_BYTES,
         STATE_RATE_BUCKETS={},
         RECOVERY_TOKENS={},
+        AI_CANCEL_EVENTS={},
         SESSION_IDLE_SECONDS=SESSION_IDLE_SECONDS,
         SESSION_ABSOLUTE_SECONDS=SESSION_ABSOLUTE_SECONDS,
         ONLINE_PRESENCE_SECONDS=ONLINE_PRESENCE_SECONDS,
@@ -534,6 +461,17 @@ def create_app(state_db_path=None):
         hits.append(now)
         buckets[key] = hits
         return False
+
+    def ai_request_key(user_id, request_id):
+        return "{}:{}".format(user_id, request_id)
+
+    def validated_ai_request_id(data):
+        request_id = str((data or {}).get("requestId") or "").strip()
+        if not request_id:
+            return ""
+        if not AI_REQUEST_ID_RE.fullmatch(request_id):
+            return None
+        return request_id
 
     def json_error(message, status=400, **extra):
         payload = {"ok": False, "error": message}
@@ -919,17 +857,32 @@ def create_app(state_db_path=None):
 
     @app.get("/api/ai/status")
     def ai_status():
-        fallback_configured = opencode_zen_available()
-        configured = bool(read_openrouter_api_key()) or fallback_configured
+        configured = bool(read_openrouter_api_key())
         return json_ok({
             "bridge": configured,
             "configured": configured,
             "provider": "openrouter",
             "model": OPENROUTER_MODEL,
-            "fallbackProvider": "opencode",
-            "fallbackModel": OPENCODE_DISPLAY_MODEL,
-            "fallbackConfigured": fallback_configured,
+            "fallbackProvider": None,
+            "fallbackModel": None,
+            "fallbackConfigured": False,
         })
+
+    @app.post("/api/ai/cancel")
+    def ai_cancel():
+        require_csrf()
+        user = require_user()
+        data = request.get_json(silent=True) or {}
+        request_id = validated_ai_request_id(data)
+        if request_id is None:
+            return json_error("Référence de requête IA invalide.", 400)
+        if not request_id:
+            return json_ok({"cancelled": False})
+        event = app.config["AI_CANCEL_EVENTS"].get(ai_request_key(user["id"], request_id))
+        if event is None:
+            return json_ok({"cancelled": False})
+        event.set()
+        return json_ok({"cancelled": True})
 
     @app.post("/api/ai/analyze")
     def ai_analyze():
@@ -938,15 +891,27 @@ def create_app(state_db_path=None):
         if rate_limited("ai", "user:{}".format(user["id"])):
             return json_error("Trop de requêtes IA. Réessayez plus tard.", 429)
         data = request.get_json(silent=True) or {}
+        request_id = validated_ai_request_id(data)
+        if request_id is None:
+            return json_error("Référence de requête IA invalide.", 400)
         prompt = str(data.get("prompt") or "").strip()
         if len(prompt) < 4:
             return json_error("Question trop courte.", 400)
         if len(prompt) > AI_MAX_PROMPT_CHARS:
             return json_error("Question trop longue.", 400)
+        cancel_event = threading.Event() if request_id else None
+        request_key = ai_request_key(user["id"], request_id) if request_id else None
+        if request_key:
+            app.config["AI_CANCEL_EVENTS"][request_key] = cancel_event
         try:
-            result = analyze_with_ai(prompt)
+            result = analyze_with_ai(prompt, cancel_event=cancel_event)
+        except AiRequestCancelled as exc:
+            return json_error(str(exc), 499)
         except RuntimeError as exc:
             return json_error(str(exc), 503)
+        finally:
+            if request_key:
+                app.config["AI_CANCEL_EVENTS"].pop(request_key, None)
         return json_ok(result)
 
     # --------------------------------------------------------
