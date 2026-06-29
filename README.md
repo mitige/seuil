@@ -196,6 +196,9 @@ Useful server environment variables:
 | `SEUIL_MAX_STATE_DB_BYTES` | `5 GiB` | Total SQLite storage quota for server state and encrypted vaults. |
 | `SEUIL_MAX_STATE_VAULTS` | `200` | Maximum number of stored vault rows. |
 | `OPENROUTER_API_KEY` | unset | Enables the optional AI assistant when configured server-side. |
+| `SEUIL_OPENCODE_CMD` | auto | Optional fallback CLI command used when OpenRouter is unavailable or exhausted; auto-detects `opencode` in `PATH`, then `~/.opencode/bin/opencode`. |
+| `SEUIL_OPENCODE_MODEL` | `opencode/gpt-5.1-codex` | OpenCode model used by the fallback provider. |
+| `SEUIL_OPENCODE_ASSUME_CONFIGURED` | unset | Set to `1` only when OpenCode credentials are provided by environment or another mechanism outside `~/.local/share/opencode/auth.json`. |
 | `SEUIL_AI_MAX_PROMPT_CHARS` | `3000` | Maximum prompt size accepted by `/api/ai/analyze`. |
 | `SEUIL_AI_MAX_OUTPUT_TOKENS` | `1200` | Maximum AI response size requested from OpenRouter. |
 

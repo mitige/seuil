@@ -7,8 +7,7 @@
     const RESPONSE_STYLE_GUIDE = [
         "Answer with enough detail to be genuinely useful: aim for 5 to 8 short paragraphs or bullet groups.",
         "Use a calm educational structure: quick reading, context interpretation, what the data suggests, practical next steps, and limits.",
-        "Include one measured vigilance section for warning signs or when to seek help.",
-        "Do not let emergency or danger language dominate the answer unless the supplied context clearly indicates immediate danger.",
+        "Do not add a separate alarm-focused section.",
         "Avoid repeating generic disclaimers; make the explanation specific to the session, trend, curve, or combination."
     ].join("\n");
 
@@ -87,14 +86,14 @@
     }
 
     function contextualReturnInstruction(kind) {
-        const shared = "Return a complete but sober analysis with concrete, user-facing explanations. Keep the tone calm. Include only one short vigilance/help section unless the context itself is clearly urgent.";
+        const shared = "Return a complete but sober analysis with concrete, user-facing explanations. Keep the tone calm and avoid a separate alarm-focused paragraph.";
         const byKind = {
-            "active-session": "Cover phase/timing, dose context, route-specific notes, what the log suggests, redose caution, what to observe now, and a short recovery/next-step plan.",
-            "pre-session": "Cover what is known from the entered plan, dose/route/timeline context, recent-history relevance, what to verify before starting, and safer alternatives such as delaying, lowering uncertainty, or not continuing.",
+            "active-session": "Cover phase/timing, dose context, route-specific notes, what the log suggests, redose timing context, what to observe now, and a recovery/next-step plan.",
+            "pre-session": "Cover what is known from the entered plan, dose/route/timeline context, recent-history relevance, what to verify before starting, and options such as delaying, reducing uncertainty, or not continuing.",
             "comparison": "Explain curve differences in onset, peak, total duration, overlap, fatigue burden, and why the curves are educational estimates rather than compatibility advice.",
-            "interaction": "Explain the likely interaction pattern, why the pairing can be unpredictable, what would make it more concerning, and practical non-technical ways to reduce uncertainty without instructing use.",
+            "interaction": "Explain the likely interaction pattern, why the pairing can be unpredictable, what changes the interpretation, and practical non-technical ways to reduce uncertainty without instructing use.",
             "trends": "Explain spacing, repetition, dose/unit patterns, route patterns, context patterns, possible tolerance/escalation signals, and 3 to 5 realistic adjustments for the next weeks.",
-            "debrief": "Explain what the session log suggests, what went well, what could be improved, recovery priorities, and one or two safeguards for the next comparable situation."
+            "debrief": "Explain what the session log suggests, what went well, what could be improved, recovery priorities, and one or two preparation notes for the next comparable situation."
         };
         return `${shared} ${byKind[kind] || ""}`;
     }
@@ -104,19 +103,13 @@
         const routeData = route && summary.routeSummaries ? summary.routeSummaries[route] : null;
         const dosage = routeData && routeData.dosage ? routeData.dosage : null;
         const durations = routeData && routeData.durations ? routeData.durations : null;
-        const risk = (summary.risk_factors || []).slice(0, 3).join(" | ");
-        const avoid = (summary.avoid_if || []).slice(0, 2).join(" | ");
-        const rules = (summary.rdr_rules || []).slice(0, 3).join(" | ");
         return [
             `${summary.name} (${summary.category || "unknown"})`,
             `route: ${route || "unknown"}`,
             dosage ? `dosage markers: threshold ${dosage.threshold}; light ${dosage.light}; common ${dosage.common}; strong ${dosage.strong}; heavy ${dosage.heavy}; unit ${dosage.unit}` : "",
             durations ? `timeline seconds: onset ${durations.onset}; comeup ${durations.comeup}; peak ${durations.peak}; offset ${durations.offset}; total ${durations.total}` : "",
             routeData ? `bioavailability: ${routeData.bioavailability}` : "",
-            summary.metabolism ? `metabolism: ${summary.metabolism}` : "",
-            risk ? `risk factors: ${risk}` : "",
-            avoid ? `avoid if: ${avoid}` : "",
-            rules ? `harm-reduction rules: ${rules}` : ""
+            summary.metabolism ? `metabolism: ${summary.metabolism}` : ""
         ].filter(Boolean).join("\n");
     }
 
@@ -129,7 +122,7 @@
         const session = snapshot.activeSession;
         if (!session) return null;
         const summary = getSubstanceSummary(session.substanceKey);
-        return buildPrompt("Analyze the active session and highlight immediate safety priorities.", [
+        return buildPrompt("Analyze the active session and explain timing/context.", [
             "Active session:",
             `substance: ${session.substanceName}; route: ${session.route}; dose cumulative: ${formatDose(session)}; set/setting: ${session.setSetting || "-"}`,
             `started: ${formatDateTime(session.startTime)}`,

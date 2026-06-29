@@ -22,7 +22,9 @@ import json
 import os
 import re
 import secrets
+import shutil
 import sqlite3
+import subprocess
 import sys
 import time
 import urllib.error
@@ -42,9 +44,14 @@ PORT = int(os.environ.get("PORT") or (sys.argv[1] if len(sys.argv) > 1 else 1234
 OPENROUTER_API_URL = os.environ.get("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
 OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "nvidia/nemotron-3-ultra-550b-a55b:free")
 OPENROUTER_KEY_FILE = ROOT / "instance" / "openrouter_api_key"
+OPENCODE_CMD = os.environ.get("SEUIL_OPENCODE_CMD", "").strip()
+OPENCODE_MODEL = os.environ.get("SEUIL_OPENCODE_MODEL", "opencode/gpt-5.1-codex")
+OPENCODE_DISPLAY_MODEL = os.environ.get("SEUIL_OPENCODE_DISPLAY_MODEL", OPENCODE_MODEL)
+OPENCODE_AUTH_PATH = os.environ.get("OPENCODE_AUTH_PATH", "").strip()
 AI_MAX_PROMPT_CHARS = int(os.environ.get("SEUIL_AI_MAX_PROMPT_CHARS", "3000"))
 AI_MAX_OUTPUT_TOKENS = int(os.environ.get("SEUIL_AI_MAX_OUTPUT_TOKENS", "1200"))
 AI_TIMEOUT_SECONDS = float(os.environ.get("SEUIL_AI_TIMEOUT_SECONDS", "25"))
+OPENCODE_TIMEOUT_SECONDS = float(os.environ.get("SEUIL_OPENCODE_TIMEOUT_SECONDS", "45"))
 
 STATE_DB_PATH = ROOT / "instance" / "seuil_state.sqlite3"
 MAX_STATE_BLOB = 512 * 1024
@@ -296,11 +303,11 @@ def hash_vault_key(vault_key):
 AI_SYSTEM_PROMPT = (
     "You are Seuil's sober harm-reduction assistant. "
     "Answer in the user's language when clear. "
-    "Be concise, nonjudgmental, and practical. "
+    "Be explanatory, nonjudgmental, and practical. "
+    "Do not add a dedicated alarm-focused section by default. "
     "Do not present psychoactive use as safe, do not optimize intoxication, and do not provide instructions for injection, hiding use, synthesis, trafficking, or evading care. "
-    "For medical risk, dangerous combinations, overdose signs, pregnancy, chronic illness, or prescribed treatments, recommend contacting a qualified professional. "
-    "For emergencies, tell the user to call local emergency services immediately. "
-    "Never claim certainty from limited context; ask for professional help when risk is unclear."
+    "If the user's own message clearly describes acute medical distress, give one brief care-seeking sentence and then return to the requested practical analysis. "
+    "Never claim certainty from limited context."
 )
 
 
@@ -360,6 +367,95 @@ def call_openrouter_chat(prompt):
     if not output:
         raise RuntimeError("Réponse IA vide.")
     return output
+
+
+def resolve_opencode_cmd():
+    if OPENCODE_CMD:
+        if os.path.isabs(OPENCODE_CMD):
+            return OPENCODE_CMD if os.access(OPENCODE_CMD, os.X_OK) else ""
+        return shutil.which(OPENCODE_CMD) or ""
+    found = shutil.which("opencode")
+    if found:
+        return found
+    local_bin = Path.home() / ".opencode" / "bin" / "opencode"
+    if local_bin.exists() and os.access(local_bin, os.X_OK):
+        return str(local_bin)
+    return ""
+
+
+def opencode_auth_file():
+    if OPENCODE_AUTH_PATH:
+        return Path(OPENCODE_AUTH_PATH).expanduser()
+    return Path.home() / ".local" / "share" / "opencode" / "auth.json"
+
+
+def opencode_model_provider():
+    return OPENCODE_MODEL.split("/", 1)[0].strip()
+
+
+def opencode_zen_available():
+    if not resolve_opencode_cmd():
+        return False
+    if os.environ.get("SEUIL_OPENCODE_ASSUME_CONFIGURED") == "1":
+        return True
+    provider = opencode_model_provider()
+    if not provider:
+        return False
+    try:
+        credentials = json.loads(opencode_auth_file().read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return bool(credentials.get(provider))
+
+
+def call_opencode_zen_chat(prompt):
+    cmd_path = resolve_opencode_cmd()
+    if not cmd_path or not opencode_zen_available():
+        raise RuntimeError("Assistant IA de secours indisponible.")
+    cmd = [
+        cmd_path,
+        "run",
+        "--model",
+        OPENCODE_MODEL,
+        str(prompt or "")[:AI_MAX_PROMPT_CHARS],
+    ]
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=str(ROOT),
+            text=True,
+            capture_output=True,
+            timeout=OPENCODE_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise RuntimeError("Assistant IA de secours indisponible.") from exc
+    if result.returncode != 0:
+        raise RuntimeError("Assistant IA de secours indisponible.")
+    output = str(result.stdout or "").strip()
+    if not output:
+        raise RuntimeError("Réponse IA vide.")
+    return output
+
+
+def analyze_with_ai(prompt):
+    try:
+        return {
+            "output": call_openrouter_chat(prompt),
+            "provider": "openrouter",
+            "model": OPENROUTER_MODEL,
+        }
+    except RuntimeError as openrouter_error:
+        if opencode_zen_available():
+            try:
+                return {
+                    "output": call_opencode_zen_chat(prompt),
+                    "provider": "opencode",
+                    "model": OPENCODE_DISPLAY_MODEL,
+                }
+            except RuntimeError:
+                pass
+        raise openrouter_error
 
 
 # ============================================================
@@ -798,12 +894,16 @@ def create_app(state_db_path=None):
 
     @app.get("/api/ai/status")
     def ai_status():
-        configured = bool(read_openrouter_api_key())
+        fallback_configured = opencode_zen_available()
+        configured = bool(read_openrouter_api_key()) or fallback_configured
         return json_ok({
             "bridge": configured,
             "configured": configured,
             "provider": "openrouter",
             "model": OPENROUTER_MODEL,
+            "fallbackProvider": "opencode",
+            "fallbackModel": OPENCODE_DISPLAY_MODEL,
+            "fallbackConfigured": fallback_configured,
         })
 
     @app.post("/api/ai/analyze")
@@ -819,10 +919,10 @@ def create_app(state_db_path=None):
         if len(prompt) > AI_MAX_PROMPT_CHARS:
             return json_error("Question trop longue.", 400)
         try:
-            output = call_openrouter_chat(prompt)
+            result = analyze_with_ai(prompt)
         except RuntimeError as exc:
             return json_error(str(exc), 503)
-        return json_ok({"output": output, "model": OPENROUTER_MODEL})
+        return json_ok(result)
 
     # --------------------------------------------------------
     # Authentification

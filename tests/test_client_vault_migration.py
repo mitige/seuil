@@ -291,10 +291,10 @@ def test_sober_contextual_ai_controls_are_rendered_without_legacy_bridge_ui():
     for fragment in hidden_fragments:
         assert fragment not in index_html
     assert 'id="ai-assistant-card"' in index_html
-    assert 'src="ai.js?v=9"' in index_html
-    assert "./ai.js?v=9" in sw_js
-    assert 'src="app.js?v=105"' in index_html
-    assert "./app.js?v=105" in sw_js
+    assert 'src="ai.js?v=10"' in index_html
+    assert "./ai.js?v=10" in sw_js
+    assert 'src="app.js?v=106"' in index_html
+    assert "./app.js?v=106" in sw_js
     assert "/api/ai/analyze" in ai_js
     assert "X-Seuil-Csrf" in ai_js
     assert "function callAi(prompt)" in ai_js
@@ -316,8 +316,17 @@ def test_contextual_ai_prompts_request_detailed_balanced_answers():
 
     assert "const RESPONSE_STYLE_GUIDE" in ai_js
     assert "5 to 8 short paragraphs or bullet groups" in ai_js
-    assert "one measured vigilance section" in ai_js
-    assert "Do not let emergency or danger language dominate the answer" in ai_js
+    assert "Do not add a separate alarm-focused section." in ai_js
+    for forbidden_fragment in [
+        "one measured vigilance section",
+        "Do not let emergency or danger language dominate the answer",
+        "risk factors:",
+        "risk level",
+        "vigilance/help section",
+        "danger signs",
+        "warning signs",
+    ]:
+        assert forbidden_fragment not in ai_js
     assert "function contextualReturnInstruction(kind)" in ai_js
     for kind in ["active-session", "pre-session", "comparison", "interaction", "trends", "debrief"]:
         assert f'contextualReturnInstruction("{kind}")' in ai_js

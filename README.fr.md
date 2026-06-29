@@ -208,6 +208,9 @@ Variables serveur utiles :
 | `SEUIL_MAX_STATE_DB_BYTES` | `5 Gio` | Quota total du stockage SQLite pour l'état serveur et les coffres chiffrés. |
 | `SEUIL_MAX_STATE_VAULTS` | `200` | Nombre maximal de coffres stockés. |
 | `OPENROUTER_API_KEY` | non défini | Active l'assistant IA optionnel côté serveur. |
+| `SEUIL_OPENCODE_CMD` | auto | Commande CLI optionnelle utilisée en secours si OpenRouter est indisponible ou épuisé ; détecte `opencode` dans le `PATH`, puis `~/.opencode/bin/opencode`. |
+| `SEUIL_OPENCODE_MODEL` | `opencode/gpt-5.1-codex` | Modèle OpenCode utilisé par le fournisseur de secours. |
+| `SEUIL_OPENCODE_ASSUME_CONFIGURED` | non défini | À mettre à `1` uniquement si les identifiants OpenCode sont fournis par l'environnement ou un mécanisme hors `~/.local/share/opencode/auth.json`. |
 | `SEUIL_AI_MAX_PROMPT_CHARS` | `3000` | Taille maximale du prompt accepté par `/api/ai/analyze`. |
 | `SEUIL_AI_MAX_OUTPUT_TOKENS` | `1200` | Taille maximale de réponse demandée à OpenRouter. |
 

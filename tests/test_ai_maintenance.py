@@ -1,3 +1,4 @@
+import json
 import importlib
 import sys
 import tempfile
@@ -71,6 +72,42 @@ class AiOpenRouterTests(unittest.TestCase):
         self.assertEqual(payload["output"], "Réponse prudente.")
         self.assertEqual(payload["model"], "nvidia/nemotron-3-ultra-550b-a55b:free")
         openrouter.assert_called_once_with("Que vérifier avant un mélange ?")
+
+    @mock.patch.object(serve, "opencode_zen_available", return_value=True)
+    @mock.patch.object(serve, "call_opencode_zen_chat", return_value="Réponse zen.")
+    @mock.patch.object(serve, "call_openrouter_chat", side_effect=RuntimeError("OpenRouter quota atteint."))
+    def test_analyze_falls_back_to_opencode_zen_when_openrouter_is_exhausted(self, openrouter, opencode, _available):
+        self.register()
+        response = self.client.post(
+            "/api/ai/analyze",
+            json={"prompt": "Analyse mes tendances sans section danger."},
+            headers=CSRF,
+        )
+
+        self.assertEqual(response.status_code, 200, response.get_json())
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["output"], "Réponse zen.")
+        self.assertEqual(payload["provider"], "opencode")
+        self.assertEqual(payload["model"], serve.OPENCODE_DISPLAY_MODEL)
+        openrouter.assert_called_once_with("Analyse mes tendances sans section danger.")
+        opencode.assert_called_once_with("Analyse mes tendances sans section danger.")
+
+    @mock.patch.object(serve, "resolve_opencode_cmd", return_value="/usr/bin/opencode")
+    def test_opencode_fallback_requires_matching_provider_credentials(self, _cmd):
+        auth_path = Path(self.tmp.name) / "auth.json"
+
+        auth_path.write_text(json.dumps({"openrouter": {"type": "api", "key": "redacted"}}), encoding="utf-8")
+        with mock.patch.object(serve, "OPENCODE_AUTH_PATH", str(auth_path)), mock.patch.object(
+            serve, "OPENCODE_MODEL", "opencode/gpt-5.1-codex"
+        ):
+            self.assertFalse(serve.opencode_zen_available())
+
+        auth_path.write_text(json.dumps({"opencode": {"type": "api", "key": "redacted"}}), encoding="utf-8")
+        with mock.patch.object(serve, "OPENCODE_AUTH_PATH", str(auth_path)), mock.patch.object(
+            serve, "OPENCODE_MODEL", "opencode/gpt-5.1-codex"
+        ):
+            self.assertTrue(serve.opencode_zen_available())
 
 
 if __name__ == "__main__":
