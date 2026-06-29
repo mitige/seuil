@@ -37,6 +37,7 @@
     const API_TIMEOUT_MS = 12000;
     const AUTH_ACTION_TIMEOUT_MS = 20000;
     const PRESENCE_HEARTBEAT_MS = 45000;
+    const ADMIN_SESSIONS_PAGE_SIZE = 30;
     let presenceHeartbeatTimer = null;
     let presenceHeartbeatInFlight = false;
 
@@ -1207,6 +1208,7 @@
     // ============================================================
     let adminUsersCache = [];
     let adminAuditBeforeId = null;
+    let adminSessionsBefore = null;
 
     function generateStrongPassword(len = 16) {
         const alpha = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*?";
@@ -1510,13 +1512,26 @@
         return "audit-neutral";
     }
 
-    async function renderAdminSessions() {
+    function adminSessionCursor(session) {
+        return `${session.lastSeen || 0}:${session.id || ""}`;
+    }
+
+    async function renderAdminSessions(reset) {
         const tbody = document.getElementById("admin-sessions-tbody");
         if (!tbody) return;
-        try {
-            const res = await api("/api/admin/sessions");
+        if (reset !== false) {
+            adminSessionsBefore = null;
             tbody.innerHTML = "";
-            if (!res.sessions.length) {
+        }
+        const params = new URLSearchParams();
+        params.set("limit", String(ADMIN_SESSIONS_PAGE_SIZE));
+        if (adminSessionsBefore) params.set("before", adminSessionsBefore);
+        try {
+            const res = await api("/api/admin/sessions?" + params.toString());
+            const sessions = res.sessions || [];
+            const moreBtn = document.getElementById("admin-sessions-more");
+            if (moreBtn) moreBtn.style.display = sessions.length === ADMIN_SESSIONS_PAGE_SIZE ? "" : "none";
+            if (!sessions.length && !tbody.children.length) {
                 const tr = document.createElement("tr");
                 const td = document.createElement("td");
                 td.colSpan = 4;
@@ -1526,7 +1541,8 @@
                 tbody.appendChild(tr);
                 return;
             }
-            res.sessions.forEach((s) => {
+            sessions.forEach((s) => {
+                adminSessionsBefore = adminSessionCursor(s);
                 const tr = document.createElement("tr");
                 const tdUser = document.createElement("td");
                 tdUser.textContent = `${s.displayName} (@${s.username})`;
@@ -1543,7 +1559,7 @@
                 btn.addEventListener("click", async () => {
                     try {
                         await api(`/api/auth/sessions/${encodeURIComponent(s.id)}`, { method: "DELETE", body: {} });
-                        renderAdminSessions();
+                        renderAdminSessions(true);
                     } catch (err) {
                         SeuilUI.toast(err.message, { type: "error" });
                     }
@@ -1642,6 +1658,8 @@
         }
         const auditMore = document.getElementById("admin-audit-more");
         if (auditMore) auditMore.addEventListener("click", () => renderAdminAudit(false));
+        const sessionsMore = document.getElementById("admin-sessions-more");
+        if (sessionsMore) sessionsMore.addEventListener("click", () => renderAdminSessions(false));
         const auditRefresh = document.getElementById("admin-audit-refresh");
         if (auditRefresh) auditRefresh.addEventListener("click", () => renderAdminAudit(true));
 

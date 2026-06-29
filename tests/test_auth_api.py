@@ -521,6 +521,50 @@ class AdminApiTests(AuthApiTestCase):
         self.assertEqual(sessions.status_code, 200)
         self.assertGreaterEqual(len(sessions.get_json()["sessions"]), 1)
 
+    def test_admin_sessions_are_paginated_like_audit_log(self):
+        now = int(serve.time.time())
+        db = serve.db_connect(self.db_path)
+        try:
+            for idx in range(35):
+                db.execute(
+                    "INSERT INTO sessions "
+                    "(id, user_id, token_hash, created_at, last_seen, expires_at, ip, user_agent) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        "session-{:02d}".format(idx),
+                        self.admin_id,
+                        "hash-{:02d}".format(idx),
+                        now - 100 - idx,
+                        now + 1000 - idx,
+                        now + 5000,
+                        "127.0.0.1",
+                        "pytest",
+                    ),
+                )
+            db.commit()
+        finally:
+            db.close()
+
+        first = self.client.get("/api/admin/sessions")
+        self.assertEqual(first.status_code, 200)
+        first_sessions = first.get_json()["sessions"]
+        self.assertEqual(len(first_sessions), 30)
+        self.assertEqual(first_sessions[0]["id"], "session-00")
+        self.assertEqual(first_sessions[-1]["id"], "session-29")
+
+        last = first_sessions[-1]
+        second = self.client.get(
+            "/api/admin/sessions?limit=30&before={}:{}".format(last["lastSeen"], last["id"])
+        )
+        self.assertEqual(second.status_code, 200)
+        second_sessions = second.get_json()["sessions"]
+        self.assertGreaterEqual(len(second_sessions), 5)
+        self.assertEqual(second_sessions[0]["id"], "session-30")
+        self.assertFalse({s["id"] for s in first_sessions} & {s["id"] for s in second_sessions})
+
+        small = self.client.get("/api/admin/sessions?limit=5")
+        self.assertEqual(len(small.get_json()["sessions"]), 5)
+
     def test_admin_user_presence_uses_recent_page_activity_not_open_session(self):
         material, user = self.create_member()
         member_client = self.app.test_client()

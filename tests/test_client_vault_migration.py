@@ -272,6 +272,7 @@ def test_sober_contextual_ai_controls_are_rendered_without_legacy_bridge_ui():
         "Lire le mélange",
         "Lire les tendances",
         "Débrief dernière session",
+        "La réponse peut prendre jusqu’à 2 minutes.",
     ]
     for fragment in visible_fragments:
         assert fragment in index_html
@@ -304,6 +305,7 @@ def test_sober_contextual_ai_controls_are_rendered_without_legacy_bridge_ui():
     assert "function promptInteraction()" in ai_js
     assert "function promptTrends()" in ai_js
     assert "function promptDebrief()" in ai_js
+    assert '"La réponse peut prendre jusqu’à 2 minutes.": "The response can take up to 2 minutes."' in read("i18n.js")
     assert "window.getSeuilAiSnapshot" in app_js
     assert "OPENROUTER_API_KEY" in serve_py
     assert "nvidia/nemotron-3-ultra-550b-a55b:free" in serve_py
@@ -702,6 +704,16 @@ def test_admin_dynamic_tables_and_server_status_use_i18n():
     assert 'label: u.active ? tx("Désactiver") : tx("Activer")' in auth_js
     assert 'title: tx("Réinitialiser le mot de passe")' in auth_js
     assert 'td.textContent = tx("Aucune session active.");' in auth_js
+    index_html = read("index.html")
+    active_sessions_block = index_html.split("<!-- Sessions actives -->", 1)[1].split("<!-- Journal d'audit -->", 1)[0]
+    users_block = index_html.split('style="margin-bottom:4px;">Utilisateurs</h2>', 1)[1].split("<!-- Sessions actives -->", 1)[0]
+    assert 'id="admin-sessions-more"' in active_sessions_block
+    assert 'id="admin-sessions-more"' not in users_block
+    assert "const ADMIN_SESSIONS_PAGE_SIZE = 30;" in auth_js
+    assert 'params.set("limit", String(ADMIN_SESSIONS_PAGE_SIZE));' in auth_js
+    assert 'params.set("before", adminSessionsBefore);' in auth_js
+    assert 'const moreBtn = document.getElementById("admin-sessions-more");' in auth_js
+    assert 'if (sessionsMore) sessionsMore.addEventListener("click", () => renderAdminSessions(false));' in auth_js
 
     for phrase in [
         "Disponibilité",
@@ -719,6 +731,7 @@ def test_admin_dynamic_tables_and_server_status_use_i18n():
         "Promouvoir",
         "Suppr.",
         "Aucune session active.",
+        "Charger plus de sessions",
     ]:
         assert json.dumps(phrase, ensure_ascii=False) + ":" in i18n_js
 

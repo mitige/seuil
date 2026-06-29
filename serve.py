@@ -1648,15 +1648,28 @@ def create_app(state_db_path=None):
     @app.get("/api/admin/sessions")
     def admin_list_sessions():
         require_admin()
+        try:
+            limit = min(max(int(request.args.get("limit", 30)), 1), 200)
+        except ValueError:
+            limit = 30
+        before = (request.args.get("before") or "").strip()
         now = int(time.time())
         session_where, session_params = active_session_condition(now, "s")
+        params = list(session_params)
+        if before:
+            before_parts = before.split(":", 1)
+            if len(before_parts) == 2 and before_parts[0].isdigit() and before_parts[1]:
+                before_last_seen = int(before_parts[0])
+                before_id = before_parts[1][:80]
+                session_where += " AND (s.last_seen < ? OR (s.last_seen = ? AND s.id < ?))"
+                params.extend([before_last_seen, before_last_seen, before_id])
         db = db_connect(dbp())
         try:
             rows = db.execute(
                 "SELECT s.id, s.created_at, s.last_seen, s.ip, s.user_agent, u.username, u.display_name "
                 "FROM sessions s JOIN users u ON u.id = s.user_id "
-                "WHERE " + session_where + " ORDER BY s.last_seen DESC",
-                session_params,
+                "WHERE " + session_where + " ORDER BY s.last_seen DESC, s.id DESC LIMIT ?",
+                params + [limit],
             ).fetchall()
         finally:
             db.close()
