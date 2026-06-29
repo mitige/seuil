@@ -73,6 +73,23 @@ class AiOpenRouterTests(unittest.TestCase):
         self.assertEqual(payload["model"], "nvidia/nemotron-3-ultra-550b-a55b:free")
         openrouter.assert_called_once_with("Que vérifier avant un mélange ?")
 
+    @mock.patch.object(serve, "call_openrouter_chat", return_value="Réponse prudente.")
+    def test_analyze_rate_limit_cannot_be_bypassed_with_forwarded_for_spoofing(self, _openrouter):
+        self.register()
+        statuses = []
+        for idx in range(31):
+            headers = dict(CSRF)
+            headers["X-Forwarded-For"] = "203.0.113.{}".format(idx)
+            response = self.client.post(
+                "/api/ai/analyze",
+                json={"prompt": "Analyse mes tendances sans section danger."},
+                headers=headers,
+            )
+            statuses.append(response.status_code)
+
+        self.assertEqual(statuses[-1], 429)
+        self.assertEqual(statuses.count(429), 1)
+
     @mock.patch.object(serve, "opencode_zen_available", return_value=True)
     @mock.patch.object(serve, "call_opencode_zen_chat", return_value="Réponse zen.")
     @mock.patch.object(serve, "call_openrouter_chat", side_effect=RuntimeError("OpenRouter quota atteint."))

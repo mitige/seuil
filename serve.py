@@ -492,7 +492,7 @@ def create_app(state_db_path=None):
         forwarded = request.headers.get("X-Forwarded-For", "").split(",", 1)[0].strip()
         return (forwarded or remote)[:64]
 
-    def rate_limited(bucket):
+    def rate_limited(bucket, identity=None):
         rule = RATE_RULES.get(bucket)
         if not rule:
             return False
@@ -500,7 +500,7 @@ def create_app(state_db_path=None):
         if limit <= 0:
             return False
         now = time.time()
-        key = (bucket, client_ip())
+        key = (bucket, str(identity)[:160] if identity else client_ip())
         buckets = app.config["STATE_RATE_BUCKETS"]
         hits = [ts for ts in buckets.get(key, []) if now - ts < window]
         if len(hits) >= limit:
@@ -909,8 +909,8 @@ def create_app(state_db_path=None):
     @app.post("/api/ai/analyze")
     def ai_analyze():
         require_csrf()
-        require_user()
-        if rate_limited("ai"):
+        user = require_user()
+        if rate_limited("ai", "user:{}".format(user["id"])):
             return json_error("Trop de requêtes IA. Réessayez plus tard.", 429)
         data = request.get_json(silent=True) or {}
         prompt = str(data.get("prompt") or "").strip()
