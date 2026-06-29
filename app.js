@@ -934,7 +934,7 @@ function registerServiceWorker() {
         window.location.reload();
     });
     window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js?v=2.3.118")
+        navigator.serviceWorker.register("./sw.js?v=2.3.119")
             .then((reg) => {
                 // Tenter d'attraper une mise à jour en cours
                 if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
@@ -3767,6 +3767,10 @@ function setupEventHandlers() {
                 route,
                 logs: [{ time: doseTime, type: "dose", dose, curveDose, inputAmount: inputDose, inputUnit: doseUnit, doseLabel: doseLabel, route, note: `Substance ajoutée au suivi : ${doseLabel} de ${db[key].name}, voie ${route.toLowerCase()}.` }]
             });
+            const deductStash = document.getElementById("check-deduct-stash").checked;
+            if (deductStash && key !== "custom" && dose !== null) {
+                deductFromStash(key, dose);
+            }
             await saveLocalData();
             formAddSub.reset();
             formAddSub.style.display = "none";

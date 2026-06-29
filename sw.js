@@ -1,4 +1,4 @@
-const CACHE_NAME = "seuil-v2.3.118";
+const CACHE_NAME = "seuil-v2.3.119";
 const NETWORK_TIMEOUT_MS = 4500;
 const CORE_ASSETS = [
   "./",
@@ -7,7 +7,7 @@ const CORE_ASSETS = [
   "./i18n.js?v=54",
   "./boot.js?v=7",
   "./ui.js?v=3",
-  "./app.js?v=108",
+  "./app.js?v=109",
   "./ai.js?v=11",
   "./auth.js?v=20",
   "./psychonaut-data.js?v=5",

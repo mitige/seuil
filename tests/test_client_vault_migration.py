@@ -294,8 +294,8 @@ def test_sober_contextual_ai_controls_are_rendered_without_legacy_bridge_ui():
     assert 'id="ai-assistant-card"' in index_html
     assert 'src="ai.js?v=11"' in index_html
     assert "./ai.js?v=11" in sw_js
-    assert 'src="app.js?v=108"' in index_html
-    assert "./app.js?v=108" in sw_js
+    assert 'src="app.js?v=109"' in index_html
+    assert "./app.js?v=109" in sw_js
     assert "/api/ai/analyze" in ai_js
     assert "/api/ai/cancel" in ai_js
     assert "X-Seuil-Csrf" in ai_js
@@ -1055,6 +1055,18 @@ def test_vague_dose_units_are_stored_and_displayed_without_fake_mg_values():
         "Non quantifié",
     ]:
         assert json.dumps(phrase, ensure_ascii=False) + ":" in i18n_js
+
+def test_deduct_stash_option_is_used_when_adding_tracked_substance():
+    app_js = read("app.js")
+    start = app_js.find('const formAddSub = document.getElementById("form-add-substance");')
+    end = app_js.find("// 1. Verrouillage local hérité", start)
+    add_sub_handler = app_js[start:end]
+
+    assert "appState.activeSession.extraSubstances.push({" in add_sub_handler
+    assert 'const deductStash = document.getElementById("check-deduct-stash").checked;' in add_sub_handler
+    assert 'if (deductStash && key !== "custom" && dose !== null)' in add_sub_handler
+    assert "deductFromStash(key, dose);" in add_sub_handler
+    assert add_sub_handler.find("deductFromStash(key, dose);") < add_sub_handler.find("await saveLocalData();")
 
 
 def test_qualitative_input_units_can_be_configured_from_settings():
