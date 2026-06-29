@@ -934,7 +934,7 @@ function registerServiceWorker() {
         window.location.reload();
     });
     window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js?v=2.3.117")
+        navigator.serviceWorker.register("./sw.js?v=2.3.118")
             .then((reg) => {
                 // Tenter d'attraper une mise à jour en cours
                 if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
@@ -1535,6 +1535,7 @@ async function updateActiveTimerDisplay() {
 
     // Mettre à jour la timeline et l'estimation de phase
     updateTimelinePhases();
+    updateActiveSubstanceIntensityLabels();
 }
 
 // Modélisation pharmacocinétique simplifiée (Bateman à compartiment unique)
@@ -1712,6 +1713,83 @@ function getActiveSubstances() {
         });
     });
     return list;
+}
+
+function getSubstanceIntensityEstimate(substance, absoluteTime) {
+    if (!substance || !substance.subInfo || !substance.subInfo.durations_seconds) {
+        return { known: false, percent: null };
+    }
+    const logs = getDoseLogs(substance.logs);
+    if (!logs.length) return { known: false, percent: null };
+
+    const fallbackTime = Number(absoluteTime) || Date.now();
+    const startTime = getEarliestDoseTime(logs, fallbackTime);
+    let endTime = startTime;
+    let known = true;
+
+    logs.forEach((log) => {
+        const route = log.route || substance.route || "Oral";
+        const durations = getDurationsForRoute(substance.subInfo, route);
+        const durationSeconds = getDurationCurveEndSeconds(durations);
+        const logTime = Number(log.time) || startTime;
+        if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+            known = false;
+            return;
+        }
+        endTime = Math.max(endTime, logTime + durationSeconds * 1000);
+    });
+
+    if (!known || endTime <= startTime) return { known: false, percent: null };
+
+    const sampleStart = Math.min(startTime, fallbackTime);
+    const sampleEnd = Math.max(endTime, fallbackTime) + 5400 * 1000;
+    const sampleCount = 64;
+    let maxConcentration = 0;
+    for (let i = 0; i < sampleCount; i++) {
+        const t = sampleStart + ((sampleEnd - sampleStart) * i) / (sampleCount - 1);
+        const concentration = getCumulativeConcentration(
+            { logs, route: substance.route || "Oral" },
+            t,
+            substance.subInfo
+        );
+        if (concentration > maxConcentration) maxConcentration = concentration;
+    }
+
+    const currentConcentration = getCumulativeConcentration(
+        { logs, route: substance.route || "Oral" },
+        fallbackTime,
+        substance.subInfo
+    );
+    const percent = maxConcentration > 0
+        ? Math.round(Math.max(0, Math.min(100, (currentConcentration / maxConcentration) * 100)))
+        : 0;
+    return { known: true, percent };
+}
+
+function formatSubstanceIntensityEstimate(substance, absoluteTime) {
+    const estimate = getSubstanceIntensityEstimate(substance, absoluteTime);
+    return estimate.known
+        ? `${tx("Intensité estimée")} ${estimate.percent}%`
+        : tx("Intensité indisponible");
+}
+
+function getActiveSubstanceIntensityRows(absoluteTime) {
+    return getActiveSubstances().map((substance) => ({
+        name: displaySubstanceName(substance.name),
+        color: substance.color,
+        estimate: getSubstanceIntensityEstimate(substance, absoluteTime)
+    }));
+}
+
+function updateActiveSubstanceIntensityLabels(absoluteTime = Date.now()) {
+    const labels = document.querySelectorAll(".active-sub-intensity");
+    if (!labels.length) return;
+    const substances = getActiveSubstances();
+    labels.forEach((label, index) => {
+        const substance = substances[index];
+        if (!substance) return;
+        label.textContent = formatSubstanceIntensityEstimate(substance, absoluteTime);
+    });
 }
 
 function isDoseLog(log) {
@@ -1939,15 +2017,36 @@ function updateTimelinePhases() {
     const probeY = paddingTop + graphHeight - (probeConc / maxConcentration) * graphHeight;
     const probeClock = new Date(probeTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const probeElapsed = formatEffectCurveElapsed(probeTime - session.startTime);
-    const probeIntensity = Math.round(Math.max(0, Math.min(100, (probeConc / maxConcentration) * 100)));
+    const probeIntensityRows = getActiveSubstanceIntensityRows(probeTime);
+    const primaryProbeEstimate = probeIntensityRows[0] && probeIntensityRows[0].estimate;
+    const probeIntensity = primaryProbeEstimate && primaryProbeEstimate.known
+        ? primaryProbeEstimate.percent
+        : Math.round(Math.max(0, Math.min(100, (probeConc / maxConcentration) * 100)));
     const readoutLeft = Math.min(Math.max(probeX, 78), Math.max(78, width - 78));
     const readoutTop = Math.min(Math.max(probeY - 44, 4), Math.max(4, height - 52));
-    const probeAria = `${tx("Temps exploré")} ${probeClock}, ${probeElapsed}, ${tx("Intensité estimée")} ${probeIntensity}%`;
+    const probeSubstanceRowsHtml = probeIntensityRows.length > 1 ? `
+        <div class="effect-curve-readout-substances">
+            ${probeIntensityRows.map(row => `
+                <span class="effect-curve-readout-substance">
+                    <i style="background:${escapeHtml(row.color)}"></i>
+                    ${escapeHtml(row.name)} · ${escapeHtml(row.estimate.known ? `${row.estimate.percent}%` : tx("Intensité indisponible"))}
+                </span>
+            `).join("")}
+        </div>
+    ` : "";
+    const probeAriaIntensities = probeIntensityRows.length > 1
+        ? probeIntensityRows.map(row => `${row.name} ${row.estimate.known ? `${row.estimate.percent}%` : tx("Intensité indisponible")}`).join(", ")
+        : `${tx("Intensité estimée")} ${probeIntensity}%`;
+    const probeAria = `${tx("Temps exploré")} ${probeClock}, ${probeElapsed}, ${probeAriaIntensities}`;
+    const readoutHeight = probeIntensityRows.length > 1
+        ? Math.min(108, 52 + probeIntensityRows.length * 18)
+        : 52;
     const probeReadoutHtml = probeHasReadout ? `
-        <div id="effect-curve-readout" class="effect-curve-readout" style="left: ${readoutLeft}px; top: ${readoutTop}px;">
+        <div id="effect-curve-readout" class="effect-curve-readout" style="left: ${readoutLeft}px; top: ${Math.min(readoutTop, Math.max(4, height - readoutHeight - 4))}px;">
             <span class="effect-curve-readout-time">${escapeHtml(probeClock)}</span>
             <span class="effect-curve-readout-elapsed">${escapeHtml(probeElapsed)}</span>
             <span class="effect-curve-readout-intensity">${escapeHtml(tx("Intensité estimée"))} ${probeIntensity}%</span>
+            ${probeSubstanceRowsHtml}
         </div>
     ` : "";
 
@@ -2324,6 +2423,10 @@ function renderActiveSubstances() {
             cumul.className = "active-sub-cumul mono";
             cumul.textContent = formatCumulativeDoseDisplay(s.logs, s.unit);
 
+            const intensity = document.createElement("span");
+            intensity.className = "active-sub-intensity";
+            intensity.textContent = formatSubstanceIntensityEstimate(s, Date.now());
+
             const actions = document.createElement("div");
             actions.className = "active-sub-actions";
 
@@ -2343,6 +2446,7 @@ function renderActiveSubstances() {
             actions.appendChild(removeBtn);
             row.appendChild(dot);
             row.appendChild(name);
+            row.appendChild(intensity);
             row.appendChild(cumul);
             row.appendChild(actions);
             el.appendChild(row);

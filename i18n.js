@@ -165,6 +165,7 @@
             "Explorer la courbe des effets": "Explore the effect curve",
             "Temps exploré": "Explored time",
             "Intensité estimée": "Estimated intensity",
+            "Intensité indisponible": "Intensity unavailable",
             "Prise initiale :": "Initial intake:",
             "Statut : Chargement...": "Status: Loading...",
             "Fin estimée :": "Estimated end:",

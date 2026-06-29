@@ -294,8 +294,8 @@ def test_sober_contextual_ai_controls_are_rendered_without_legacy_bridge_ui():
     assert 'id="ai-assistant-card"' in index_html
     assert 'src="ai.js?v=11"' in index_html
     assert "./ai.js?v=11" in sw_js
-    assert 'src="app.js?v=107"' in index_html
-    assert "./app.js?v=107" in sw_js
+    assert 'src="app.js?v=108"' in index_html
+    assert "./app.js?v=108" in sw_js
     assert "/api/ai/analyze" in ai_js
     assert "/api/ai/cancel" in ai_js
     assert "X-Seuil-Csrf" in ai_js
@@ -2125,6 +2125,25 @@ def test_active_effect_curve_has_draggable_probe_readout():
     assert ".effect-curve-stage" in styles_css
     assert ".effect-curve-readout" in styles_css
     assert "touch-action: none" in styles_css
+
+
+def test_active_multi_substance_intensity_is_shown_per_substance():
+    app_js = read("app.js")
+    styles_css = read("styles.css")
+    i18n_js = read("i18n.js")
+
+    assert "function getSubstanceIntensityEstimate(substance, absoluteTime)" in app_js
+    assert "function formatSubstanceIntensityEstimate(substance, absoluteTime)" in app_js
+    assert "function getActiveSubstanceIntensityRows(absoluteTime)" in app_js
+    assert "function updateActiveSubstanceIntensityLabels(absoluteTime = Date.now())" in app_js
+    assert "updateActiveSubstanceIntensityLabels();" in app_js
+    assert "probeIntensityRows.length > 1" in app_js
+    assert "effect-curve-readout-substances" in app_js
+    assert "active-sub-intensity" in app_js
+    assert 'intensity.textContent = formatSubstanceIntensityEstimate(s, Date.now());' in app_js
+    assert ".active-sub-intensity" in styles_css
+    assert ".effect-curve-readout-substance" in styles_css
+    assert '"Intensité indisponible": "Intensity unavailable"' in i18n_js
 
 
 def test_active_effect_curve_hides_probe_readout_when_drag_ends():
