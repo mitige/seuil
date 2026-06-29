@@ -361,8 +361,11 @@ def test_donations_page_uses_app_navigation_and_i18n():
     assert "paypal.me" not in index_html.lower()
     assert "eusdeu21@gmail.com" in index_html
     assert 'href="mailto:eusdeu21@gmail.com"' in index_html
+    assert "Ouvrir un email" not in index_html
+    assert "Ouvrir un email" not in i18n_js
     assert "PayPal Friends and Family" in index_html
-    assert 'class="paypal-name-box"' in index_html
+    assert '<div class="info-row"><span>Nom affiché sur PayPal</span><strong>Elise Dune</strong></div>' in index_html
+    assert "paypal-name-box" not in index_html
     assert "Elise Dune" in index_html
     assert "Un soutien volontaire aide à maintenir l’hébergement, les audits, les sources et les mises à jour éditoriales." in index_html
 
@@ -374,7 +377,6 @@ def test_donations_page_uses_app_navigation_and_i18n():
         "Adresse PayPal",
         "Nom affiché sur PayPal",
         "Elise Dune",
-        "Ouvrir un email",
         "Aucune donnée de santé, de session ou de compte n’est demandée pour donner.",
     ]:
         assert json.dumps(phrase, ensure_ascii=False) + ":" in i18n_js
@@ -384,7 +386,7 @@ def test_donations_page_uses_app_navigation_and_i18n():
         "    margin-top: 20px;\n"
         "}"
     ) in styles_css
-    assert ".paypal-name-box" in styles_css
+    assert ".paypal-name-box" not in styles_css
 
 
 def test_i18n_covers_public_static_pages():

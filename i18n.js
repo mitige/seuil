@@ -410,7 +410,6 @@
             "aucune contrepartie, aucun accès payant, aucune donnée de santé demandée": "no reward, no paid access, no health data requested",
             "Hors coffre Seuil": "Outside the Seuil vault",
             "Aucune donnée de santé, de session ou de compte n’est demandée pour donner.": "No health, session, or account data is requested to donate.",
-            "Ouvrir un email": "Open an email",
             "Pourquoi donner ?": "Why donate?",
             "Hébergement :": "Hosting:",
             "garder Seuil accessible, stable et rapide.": "keep Seuil accessible, stable, and fast.",

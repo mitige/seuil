@@ -1,4 +1,4 @@
-const CACHE_NAME = "seuil-v2.3.112";
+const CACHE_NAME = "seuil-v2.3.113";
 const NETWORK_TIMEOUT_MS = 4500;
 const CORE_ASSETS = [
   "./",
