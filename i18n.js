@@ -389,6 +389,7 @@
             "Pas assez d'informations à analyser.": "Not enough information to analyze.",
             "Assistant disponible.": "Assistant available.",
             "Assistant indisponible.": "Assistant unavailable.",
+            "Statut IA non vérifié. Vous pouvez quand même essayer.": "AI status not verified. You can still try.",
             "Question trop courte.": "Question too short.",
             "Question trop longue.": "Question too long.",
             "Réponse en cours...": "Answer in progress...",

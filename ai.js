@@ -4,6 +4,7 @@
 
     const $ = (id) => document.getElementById(id);
     const PROMPT_LIMIT = 2900;
+    const AI_STATUS_RETRY_DELAY_MS = 700;
     let activeAiRequest = null;
     const RESPONSE_STYLE_GUIDE = [
         "Answer with enough detail to be genuinely useful: aim for 5 to 8 short paragraphs or bullet groups.",
@@ -36,6 +37,10 @@
     function clampText(text, max) {
         const value = String(text || "");
         return value.length > max ? `${value.slice(0, max - 40)}\n[contexte tronque]` : value;
+    }
+
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     function currentLanguageName() {
@@ -363,21 +368,33 @@
     }
 
     async function refreshStatus() {
-        try {
-            const response = await fetch("/api/ai/status", {
-                credentials: "same-origin",
-                cache: "no-store",
-                headers: { "Accept": "application/json" }
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (response.ok && payload.configured) {
-                setStatus("Assistant disponible.");
-                return true;
+        let unconfigured = false;
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            try {
+                const response = await fetch("/api/ai/status", {
+                    credentials: "same-origin",
+                    cache: "no-store",
+                    headers: { "Accept": "application/json" }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (response.ok && payload.configured) {
+                    setStatus("Assistant disponible.");
+                    return true;
+                }
+                if (response.ok && payload.configured === false) {
+                    unconfigured = true;
+                    break;
+                }
+            } catch (_) {
+                // Statut informatif uniquement : une demande utilisateur peut encore réussir.
             }
-        } catch (_) {
-            // Statut informatif uniquement.
+            if (attempt === 0) await delay(AI_STATUS_RETRY_DELAY_MS);
         }
-        setStatus("Assistant indisponible.", "error");
+        if (unconfigured) {
+            setStatus("Assistant indisponible.", "error");
+            return false;
+        }
+        setStatus("Statut IA non vérifié. Vous pouvez quand même essayer.", "warn");
         return false;
     }
 

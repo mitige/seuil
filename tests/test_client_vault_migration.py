@@ -292,10 +292,12 @@ def test_sober_contextual_ai_controls_are_rendered_without_legacy_bridge_ui():
     for fragment in hidden_fragments:
         assert fragment not in index_html
     assert 'id="ai-assistant-card"' in index_html
-    assert 'src="ai.js?v=11"' in index_html
-    assert "./ai.js?v=11" in sw_js
-    assert 'src="app.js?v=109"' in index_html
-    assert "./app.js?v=109" in sw_js
+    assert 'src="i18n.js?v=55"' in index_html
+    assert "./i18n.js?v=55" in sw_js
+    assert 'src="ai.js?v=12"' in index_html
+    assert "./ai.js?v=12" in sw_js
+    assert 'src="app.js?v=110"' in index_html
+    assert "./app.js?v=110" in sw_js
     assert "/api/ai/analyze" in ai_js
     assert "/api/ai/cancel" in ai_js
     assert "X-Seuil-Csrf" in ai_js
@@ -317,6 +319,17 @@ def test_sober_contextual_ai_controls_are_rendered_without_legacy_bridge_ui():
     assert "sk-or-v1" not in index_html + sw_js + ai_js + serve_py
     assert "opencode run" not in serve_py
     assert "subprocess.run" not in serve_py
+
+
+def test_ai_status_retries_and_does_not_mark_unknown_status_as_unavailable():
+    ai_js = read("ai.js")
+    i18n_js = read("i18n.js")
+
+    assert "const AI_STATUS_RETRY_DELAY_MS" in ai_js
+    assert "for (let attempt = 0; attempt < 2; attempt += 1)" in ai_js
+    assert "await delay(AI_STATUS_RETRY_DELAY_MS);" in ai_js
+    assert 'setStatus("Statut IA non vérifié. Vous pouvez quand même essayer.", "warn");' in ai_js
+    assert '"Statut IA non vérifié. Vous pouvez quand même essayer.": "AI status not verified. You can still try."' in i18n_js
 
 
 def test_contextual_ai_prompts_request_detailed_balanced_answers():
